@@ -269,34 +269,55 @@ function render(){
     items.filter(p=>p.estado!=='publicado').forEach(p=>html+=cardHTML(p));
     items.filter(p=>p.estado==='publicado').forEach(p=>html+=cardHTML(p));
   } else if(period==='mes'){
-    // Compact rows grouped by date
+    // Calendar grid like week view but full month
     const byDate={};
     data.forEach(p=>{
-      const d=p.fecha_publicacion||'Sin fecha';
-      if(!byDate[d]) byDate[d]=[];
-      byDate[d].push(p);
+      const d=p.fecha_publicacion||'';
+      if(d){ if(!byDate[d]) byDate[d]=[]; byDate[d].push(p); }
     });
-    const dates=Object.keys(byDate).sort();
-    dates.forEach(d=>{
-      const dt=new Date(d+'T12:00:00');
-      const today=isToday(d);
-      const pending=byDate[d].filter(p=>p.estado!=='publicado').length;
-      const done=byDate[d].filter(p=>p.estado==='publicado').length;
-      html+=`<div class="date-header ${today?'today':''}" style="cursor:pointer;" onclick="period='hoy';currentDate=new Date('${d}T12:00:00');document.querySelectorAll('.period-btn').forEach(e=>e.classList.toggle('active',e.dataset.p==='hoy'));load()">
-        ${DIAS[dt.getDay()]} ${dt.getDate()}
-        <span style="font-size:11px;color:#555;">${pending?pending+' pendiente'+(pending>1?'s':''):''} ${done?'· '+done+' ✓':''}</span>
+
+    const y=currentDate.getFullYear(), m=currentDate.getMonth();
+    const firstDay=new Date(y,m,1);
+    const lastDay=new Date(y,m+1,0);
+    const startOffset=firstDay.getDay()||7; // Mon=1
+
+    const dias_sem=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+    html+='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:12px;">';
+    dias_sem.forEach(d=>html+=`<div style="text-align:center;font-size:9px;color:#444;font-weight:700;padding:4px 0;">${d}</div>`);
+
+    // Empty cells before month starts
+    for(let i=1;i<startOffset;i++) html+='<div></div>';
+
+    for(let day=1;day<=lastDay.getDate();day++){
+      const ds=y+'-'+String(m+1).padStart(2,'0')+'-'+String(day).padStart(2,'0');
+      const today=isToday(ds);
+      const isSel=selDay===ds;
+      const fp=byDate[ds]||[];
+      const filtered=filterData(fp);
+      const pending=filtered.filter(p=>p.estado!=='publicado').length;
+      const done=filtered.filter(p=>p.estado==='publicado').length;
+      let dots='';
+      for(let j=0;j<Math.min(pending,4);j++) dots+='<div class="dot dot-p"></div>';
+      for(let j=0;j<Math.min(done,4);j++) dots+='<div class="dot dot-d"></div>';
+
+      const border=today?'border-color:#DC2626;background:#0d0000;':isSel?'box-shadow:0 0 0 1px #DC2626;':'';
+      html+=`<div class="week-day" style="${border}" onclick="selDay=selDay==='${ds}'?null:'${ds}';render()">
+        <div class="week-day-num" style="font-size:14px;">${day}</div>
+        <div class="week-day-count">${filtered.length||''}</div>
+        <div class="week-day-dots">${dots}</div>
       </div>`;
-      byDate[d].forEach(p=>{
-        const pub=p.estado==='publicado';
-        html+=`<div class="row ${pub?'pub':''}">
-          <span class="row-time">${p.hora_publicacion||''}</span>
-          <span class="row-client">${p._client||p.client_name||''}</span>
-          <span class="row-title">${p.titulo||'Sin título'}</span>
-          <span class="row-badge">${p.tipo_pedido==='historias'?'H':'G'}</span>
-          ${pub?'<span class="row-done">✓</span>':`<button class="row-btn" onclick="publicar(${p.id},this)">Publicar</button>`}
-        </div>`;
-      });
-    });
+    }
+    html+='</div>';
+
+    // Detail of selected day
+    if(selDay && byDate[selDay]){
+      const dt=new Date(selDay+'T12:00:00');
+      html+=`<div class="date-header today">${DIAS[dt.getDay()]} ${dt.getDate()} ${MESES[dt.getMonth()]}</div>`;
+      const items=filterData(byDate[selDay]);
+      items.filter(p=>p.estado!=='publicado').forEach(p=>{ p._client=p._client||p.client_name; html+=cardHTML(p); });
+      items.filter(p=>p.estado==='publicado').forEach(p=>{ p._client=p._client||p.client_name; html+=cardHTML(p); });
+      if(!items.length) html+='<div class="empty">Sin piezas este día</div>';
+    }
   } else {
     // Hoy: split historias vs grilla
     const historias=data.filter(p=>p.tipo_pedido==='historias');
