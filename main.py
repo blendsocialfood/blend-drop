@@ -100,6 +100,23 @@ def api_cliente_piezas():
     except Exception as e:
         return jsonify({'error': str(e)}), 502
 
+@app.route('/api/mes')
+def api_mes():
+    if 'user' not in session:
+        return jsonify({'error': 'no auth'}), 401
+    mes = request.args.get('mes', '')
+    client_id = request.args.get('client_id', '')
+    token = generate_token(session['user'], session['role'])
+    params = {'mes': mes, 'token': token}
+    if client_id:
+        params['client_id'] = client_id
+    try:
+        r = http_requests.get(f'{UNITY_URL}/api/piezas-publicar-mes',
+            params=params, timeout=10)
+        return jsonify(r.json()), r.status_code
+    except Exception as e:
+        return jsonify({'error': str(e)}), 502
+
 @app.route('/api/publicar', methods=['POST'])
 def api_publicar():
     if 'user' not in session:
