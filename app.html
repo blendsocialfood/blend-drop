@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blend Drop</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#000; color:#eee; font-family:'Inter',sans-serif; min-height:100vh; }
+
+/* Nav SF */
+.nav-sf { position:fixed; top:0; left:0; right:0; height:44px; background:#0a0a0a; border-bottom:1px solid #1a1a1a; display:flex; align-items:center; padding:0 16px; z-index:1000; gap:12px; }
+.nav-sf a { color:#555; font-size:11px; text-decoration:none; font-weight:500; padding:4px 8px; border-radius:6px; transition:all .15s; }
+.nav-sf a:hover { color:#ccc; background:#1a1a1a; }
+.nav-sf .active { color:#DC2626; }
+
+/* App */
+.app { max-width:700px; margin:60px auto 40px; padding:0 16px; }
+.header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
+.logo { font-size:22px; font-weight:800; color:#DC2626; display:flex; align-items:center; gap:8px; }
+.logo span { font-size:20px; }
+.date-nav { display:flex; align-items:center; gap:8px; }
+.date-nav button { background:none; border:1px solid #333; color:#888; cursor:pointer; padding:4px 10px; border-radius:6px; font-size:14px; }
+.date-nav button:hover { color:#eee; border-color:#555; }
+.date-label { font-size:14px; font-weight:600; color:#ddd; min-width:160px; text-align:center; }
+
+/* Tabs */
+.tabs { display:flex; gap:4px; margin-bottom:20px; }
+.tab { padding:8px 16px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; border:1px solid #222; background:#111; color:#888; transition:all .15s; }
+.tab.active { background:#1a0000; color:#DC2626; border-color:#DC2626; }
+.tab:hover:not(.active) { color:#ccc; border-color:#444; }
+
+/* Progress */
+.progress-bar { background:#1a1a1a; border-radius:10px; height:8px; margin-bottom:20px; overflow:hidden; }
+.progress-fill { height:100%; background:linear-gradient(90deg, #DC2626, #f87171); border-radius:10px; transition:width .4s; }
+.progress-text { font-size:12px; color:#888; margin-bottom:8px; }
+
+/* Section */
+.section-title { font-size:13px; font-weight:700; color:#DC2626; text-transform:uppercase; letter-spacing:1px; margin:24px 0 10px; display:flex; align-items:center; gap:8px; }
+.section-title .count { font-size:11px; color:#666; font-weight:500; }
+
+/* Card */
+.card { background:#0d0d0d; border:1px solid #1a1a1a; border-radius:12px; padding:14px; margin-bottom:8px; transition:border .2s; }
+.card:hover { border-color:#333; }
+.card.published { opacity:.45; }
+.card-top { display:flex; gap:12px; align-items:flex-start; }
+.card-thumb { width:64px; height:64px; border-radius:8px; object-fit:cover; border:1px solid #222; flex-shrink:0; }
+.card-thumb-placeholder { width:64px; height:64px; border-radius:8px; background:#111; border:1px solid #222; display:flex; align-items:center; justify-content:center; color:#333; font-size:20px; flex-shrink:0; }
+.card-info { flex:1; min-width:0; }
+.card-time { font-size:11px; font-weight:700; color:#DC2626; margin-bottom:2px; }
+.card-client { font-size:10px; color:#888; margin-bottom:2px; }
+.card-title { font-size:14px; font-weight:600; color:#eee; margin-bottom:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.card-meta { display:flex; gap:6px; flex-wrap:wrap; }
+.badge { font-size:9px; padding:2px 6px; border-radius:4px; border:1px solid; }
+.badge-pilar { background:#DC262622; color:#f87171; border-color:#DC262633; }
+.badge-sticker { background:#06b6d422; color:#22d3ee; border-color:#06b6d433; }
+.badge-formato { background:#a78bfa22; color:#a78bfa; border-color:#a78bfa33; }
+.card-actions { display:flex; gap:6px; align-items:center; flex-shrink:0; }
+.btn-download { background:none; border:1px solid #333; color:#888; padding:6px 10px; border-radius:6px; cursor:pointer; font-size:12px; text-decoration:none; transition:all .15s; }
+.btn-download:hover { color:#eee; border-color:#555; }
+.btn-publish { background:#1a0000; border:1px solid #DC2626; color:#DC2626; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:600; transition:all .15s; }
+.btn-publish:hover { background:#DC2626; color:#fff; }
+.btn-published { background:#0a1a0a; border:1px solid #22c55e; color:#22c55e; padding:6px 12px; border-radius:6px; font-size:12px; font-weight:600; cursor:default; }
+
+/* Semana */
+.week-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:6px; margin-bottom:16px; }
+.week-day { background:#0d0d0d; border:1px solid #1a1a1a; border-radius:10px; padding:10px 8px; text-align:center; cursor:pointer; transition:all .15s; min-height:80px; }
+.week-day:hover { border-color:#333; }
+.week-day.today { border-color:#DC2626; background:#1a0000; }
+.week-day.selected { border-color:#DC2626; box-shadow:0 0 0 1px #DC2626; }
+.week-day-name { font-size:10px; color:#666; font-weight:600; text-transform:uppercase; margin-bottom:4px; }
+.week-day-num { font-size:20px; font-weight:700; color:#eee; margin-bottom:6px; }
+.week-day-count { font-size:10px; color:#888; }
+.week-day-dots { display:flex; gap:3px; justify-content:center; margin-top:4px; }
+.dot { width:6px; height:6px; border-radius:50%; }
+.dot-pending { background:#DC2626; }
+.dot-done { background:#22c55e; }
+
+/* Cliente select */
+.client-select { width:100%; padding:10px 14px; background:#111; color:#ccc; border:1px solid #222; border-radius:8px; font-size:14px; font-family:inherit; margin-bottom:16px; }
+
+/* Empty */
+.empty { text-align:center; color:#555; padding:60px 20px; font-size:14px; }
+
+/* Toast */
+.toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#22c55e; color:#000; padding:10px 24px; border-radius:8px; font-size:13px; font-weight:600; z-index:9999; opacity:0; transition:opacity .3s; pointer-events:none; }
+.toast.show { opacity:1; }
+
+@media (max-width:600px) {
+  .week-grid { grid-template-columns:repeat(7,1fr); gap:3px; }
+  .week-day { padding:6px 4px; min-height:60px; }
+  .week-day-num { font-size:16px; }
+  .card-thumb, .card-thumb-placeholder { width:48px; height:48px; }
+  .header { flex-direction:column; gap:12px; align-items:flex-start; }
+}
+</style>
+</head>
+<body>
+
+<!-- Nav SF -->
+<div class="nav-sf">
+  <a href="#" class="active" style="color:#DC2626;font-weight:700;">🚀 Drop</a>
+  <a href="#" id="nav-os">SF</a>
+  <a href="#" id="nav-unity">Unity</a>
+</div>
+
+<div class="app">
+  <!-- Header -->
+  <div class="header">
+    <div class="logo"><span>🚀</span> Blend Drop</div>
+    <div class="date-nav">
+      <button onclick="navDate(-1)">‹</button>
+      <div class="date-label" id="date-label"></div>
+      <button onclick="navDate(1)">›</button>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <div class="tab active" data-tab="hoy" onclick="switchTab('hoy')">Hoy</div>
+    <div class="tab" data-tab="semana" onclick="switchTab('semana')">Semana</div>
+    <div class="tab" data-tab="cliente" onclick="switchTab('cliente')">Por Cliente</div>
+  </div>
+
+  <!-- Content -->
+  <div id="content"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const UNITY_URL = 'https://positive-appreciation-production.up.railway.app';
+const OS_URL = 'https://socialfood-os-production.up.railway.app';
+
+// Nav links
+document.getElementById('nav-os').href = OS_URL + '/admin';
+document.getElementById('nav-unity').href = UNITY_URL;
+
+let currentTab = 'hoy';
+let currentDate = new Date();
+let selectedWeekDay = null;
+let clientesCache = null;
+let selectedCliente = '';
+
+const DIAS_ES = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+const MESES_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+function fmtDate(d) {
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function fmtLabel(d) {
+  const hoy = new Date();
+  const isHoy = fmtDate(d) === fmtDate(hoy);
+  const dia = DIAS_ES[d.getDay()];
+  return (isHoy ? 'Hoy — ' : '') + dia + ' ' + d.getDate() + ' ' + MESES_ES[d.getMonth()];
+}
+
+function updateDateLabel() {
+  document.getElementById('date-label').textContent = fmtLabel(currentDate);
+}
+
+function navDate(delta) {
+  if (currentTab === 'semana') {
+    currentDate.setDate(currentDate.getDate() + delta * 7);
+  } else {
+    currentDate.setDate(currentDate.getDate() + delta);
+  }
+  updateDateLabel();
+  loadTab();
+}
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  selectedWeekDay = null;
+  loadTab();
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ── Load tabs ──
+
+async function loadTab() {
+  updateDateLabel();
+  if (currentTab === 'hoy') await loadHoy();
+  else if (currentTab === 'semana') await loadSemana();
+  else if (currentTab === 'cliente') await loadCliente();
+}
+
+async function loadHoy() {
+  const el = document.getElementById('content');
+  el.innerHTML = '<div class="empty">Cargando...</div>';
+  try {
+    const r = await fetch('/api/hoy?fecha=' + fmtDate(currentDate));
+    const data = await r.json();
+    renderHoy(data);
+  } catch(e) {
+    el.innerHTML = '<div class="empty">Error: ' + e.message + '</div>';
+  }
+}
+
+function renderHoy(clientes) {
+  const el = document.getElementById('content');
+  let historias = [], grilla = [];
+  clientes.forEach(cl => {
+    cl.piezas.forEach(p => {
+      p._client = cl.client_name;
+      if (p.tipo_pedido === 'historias') historias.push(p);
+      else grilla.push(p);
+    });
+  });
+
+  const all = [...historias, ...grilla];
+  const total = all.length;
+  const done = all.filter(p => p.estado === 'publicado').length;
+  const pct = total ? Math.round(done / total * 100) : 0;
+
+  let html = '';
+
+  // Progress
+  if (total > 0) {
+    html += `<div class="progress-text">${done} de ${total} publicados</div>`;
+    html += `<div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>`;
+  }
+
+  // Historias pendientes
+  const histPending = historias.filter(p => p.estado !== 'publicado');
+  const histDone = historias.filter(p => p.estado === 'publicado');
+  if (histPending.length || histDone.length) {
+    html += `<div class="section-title">Historias <span class="count">${historias.length}</span></div>`;
+    histPending.forEach(p => { html += cardHTML(p); });
+    histDone.forEach(p => { html += cardHTML(p); });
+  }
+
+  // Grilla pendientes
+  const grillaPending = grilla.filter(p => p.estado !== 'publicado');
+  const grillaDone = grilla.filter(p => p.estado === 'publicado');
+  if (grillaPending.length || grillaDone.length) {
+    html += `<div class="section-title">Grilla <span class="count">${grilla.length}</span></div>`;
+    grillaPending.forEach(p => { html += cardHTML(p); });
+    grillaDone.forEach(p => { html += cardHTML(p); });
+  }
+
+  if (!total) {
+    html = '<div class="empty">No hay piezas para publicar este día</div>';
+  }
+
+  el.innerHTML = html;
+}
+
+function cardHTML(p) {
+  const isPub = p.estado === 'publicado';
+  const thumb = p.drive_file_id
+    ? `<img class="card-thumb" src="${UNITY_URL}/api/drive/thumb/${p.drive_file_id}?size=small" loading="lazy" onerror="this.outerHTML='<div class=\\'card-thumb-placeholder\\'>📷</div>'">`
+    : '<div class="card-thumb-placeholder">📷</div>';
+  const download = p.drive_file_id
+    ? `<a href="${UNITY_URL}/api/drive/file/${p.drive_file_id}" target="_blank" class="btn-download" title="Descargar">⬇</a>`
+    : '';
+  const pubBtn = isPub
+    ? '<div class="btn-published">✓</div>'
+    : `<button class="btn-publish" onclick="publicar(${p.id},this)">Publicar</button>`;
+
+  let badges = '';
+  if (p.pilar) badges += `<span class="badge badge-pilar">${p.pilar}</span>`;
+  if (p.stickers && p.stickers !== 'no usa') badges += `<span class="badge badge-sticker">${p.stickers}</span>`;
+  if (p.formato) badges += `<span class="badge badge-formato">${p.formato}</span>`;
+
+  return `<div class="card ${isPub ? 'published' : ''}" id="card-${p.id}">
+    <div class="card-top">
+      ${thumb}
+      <div class="card-info">
+        ${p.hora_publicacion ? `<div class="card-time">${p.hora_publicacion}</div>` : ''}
+        <div class="card-client">${p._client || ''}</div>
+        <div class="card-title">${p.titulo}</div>
+        <div class="card-meta">${badges}</div>
+      </div>
+      <div class="card-actions">
+        ${download}
+        ${pubBtn}
+      </div>
+    </div>
+  </div>`;
+}
+
+async function publicar(pid, btn) {
+  btn.disabled = true; btn.textContent = '...';
+  try {
+    const r = await fetch('/api/publicar', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({pieza_id: pid})
+    });
+    if (r.ok) {
+      toast('Publicado');
+      loadTab();
+    } else {
+      const d = await r.json();
+      alert(d.error || 'Error');
+      btn.disabled = false; btn.textContent = 'Publicar';
+    }
+  } catch(e) { alert('Error: ' + e.message); btn.disabled = false; btn.textContent = 'Publicar'; }
+}
+
+// ── Semana ──
+
+async function loadSemana() {
+  const el = document.getElementById('content');
+  el.innerHTML = '<div class="empty">Cargando...</div>';
+  try {
+    const r = await fetch('/api/semana?fecha=' + fmtDate(currentDate));
+    const dias = await r.json();
+    renderSemana(dias);
+  } catch(e) {
+    el.innerHTML = '<div class="empty">Error: ' + e.message + '</div>';
+  }
+}
+
+function renderSemana(dias) {
+  const el = document.getElementById('content');
+  const hoy = fmtDate(new Date());
+
+  let html = '<div class="week-grid">';
+  dias.forEach((d, i) => {
+    const isHoy = d.fecha === hoy;
+    const isSel = selectedWeekDay === d.fecha;
+    const num = parseInt(d.fecha.split('-')[2]);
+    const pending = d.piezas.filter(p => p.estado !== 'publicado').length;
+    const done = d.piezas.filter(p => p.estado === 'publicado').length;
+    let dots = '';
+    for (let j = 0; j < Math.min(pending, 5); j++) dots += '<div class="dot dot-pending"></div>';
+    for (let j = 0; j < Math.min(done, 5); j++) dots += '<div class="dot dot-done"></div>';
+
+    html += `<div class="week-day ${isHoy ? 'today' : ''} ${isSel ? 'selected' : ''}" onclick="selectDay('${d.fecha}')">
+      <div class="week-day-name">${d.dia}</div>
+      <div class="week-day-num">${num}</div>
+      <div class="week-day-count">${d.piezas.length} piezas</div>
+      <div class="week-day-dots">${dots}</div>
+    </div>`;
+  });
+  html += '</div>';
+
+  // Show selected day detail
+  if (selectedWeekDay) {
+    const day = dias.find(d => d.fecha === selectedWeekDay);
+    if (day && day.piezas.length) {
+      const dayDate = new Date(selectedWeekDay + 'T12:00:00');
+      html += `<div class="section-title">${DIAS_ES[dayDate.getDay()]} ${dayDate.getDate()} ${MESES_ES[dayDate.getMonth()]}</div>`;
+      day.piezas.forEach(p => {
+        p._client = p.client_name;
+        html += cardHTML(p);
+      });
+    } else if (day) {
+      html += '<div class="empty">Sin piezas este día</div>';
+    }
+  }
+
+  el.innerHTML = html;
+}
+
+function selectDay(fecha) {
+  selectedWeekDay = selectedWeekDay === fecha ? null : fecha;
+  loadSemana();
+}
+
+// ── Por Cliente ──
+
+async function loadCliente() {
+  const el = document.getElementById('content');
+  if (!clientesCache) {
+    try {
+      const r = await fetch('/api/clientes');
+      clientesCache = await r.json();
+    } catch(e) {
+      el.innerHTML = '<div class="empty">Error cargando clientes</div>';
+      return;
+    }
+  }
+
+  let html = '<select class="client-select" onchange="selectedCliente=this.value;loadClientePiezas()">';
+  html += '<option value="">Selecciona un cliente</option>';
+  (clientesCache || []).forEach(c => {
+    const sel = selectedCliente == c.id ? 'selected' : '';
+    html += `<option value="${c.id}" ${sel}>${c.name || c.nombre}</option>`;
+  });
+  html += '</select>';
+  html += '<div id="cliente-content"></div>';
+  el.innerHTML = html;
+
+  if (selectedCliente) loadClientePiezas();
+}
+
+async function loadClientePiezas() {
+  const el = document.getElementById('cliente-content');
+  if (!selectedCliente) { el.innerHTML = ''; return; }
+  el.innerHTML = '<div class="empty">Cargando...</div>';
+
+  const now = new Date();
+  const mes = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+
+  try {
+    const r = await fetch('/api/cliente-piezas?client_id=' + selectedCliente + '&mes=' + mes);
+    const piezas = await r.json();
+
+    if (!piezas.length) {
+      el.innerHTML = '<div class="empty">Sin piezas aprobadas para este cliente</div>';
+      return;
+    }
+
+    piezas.forEach(p => { p._client = p.client_name || ''; });
+    const pending = piezas.filter(p => p.estado !== 'publicado');
+    const done = piezas.filter(p => p.estado === 'publicado');
+
+    let html = '';
+    if (pending.length) {
+      html += `<div class="section-title">Pendientes <span class="count">${pending.length}</span></div>`;
+      pending.forEach(p => { html += cardHTML(p); });
+    }
+    if (done.length) {
+      html += `<div class="section-title">Publicados <span class="count">${done.length}</span></div>`;
+      done.forEach(p => { html += cardHTML(p); });
+    }
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = '<div class="empty">Error: ' + e.message + '</div>';
+  }
+}
+
+// Init
+updateDateLabel();
+loadTab();
+</script>
+</body>
+</html>
