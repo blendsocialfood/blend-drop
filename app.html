@@ -82,6 +82,18 @@ body { background:#000; color:#eee; font-family:'Inter',sans-serif; min-height:1
 .dot-d { background:#22c55e; }
 
 /* Empty */
+/* Compact row for mes */
+.row { display:flex; align-items:center; gap:8px; padding:6px 10px; border-bottom:1px solid #0d0d0d; font-size:12px; transition:background .1s; }
+.row:hover { background:#0a0a0a; }
+.row.pub { opacity:.4; }
+.row-client { color:#DC2626; font-size:10px; min-width:80px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.row-title { flex:1; color:#ccc; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.row-badge { font-size:9px; padding:1px 5px; border-radius:3px; background:#DC262615; color:#f87171; }
+.row-time { color:#666; font-size:10px; min-width:36px; }
+.row-btn { background:none; border:1px solid #DC2626; color:#DC2626; padding:2px 8px; border-radius:4px; cursor:pointer; font-size:10px; font-weight:600; }
+.row-btn:hover { background:#DC2626; color:#fff; }
+.row-done { color:#22c55e; font-size:12px; }
+
 .empty { text-align:center; color:#444; padding:60px 20px; font-size:13px; }
 
 /* Toast */
@@ -251,28 +263,39 @@ function render(){
     html+=`<div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>`;
   }
 
-  if(period==='mes' || (period==='semana' && selDay)){
-    // Group by date
+  if(period==='semana' && selDay){
+    const items=data.filter(p=>(p._fecha||p.fecha_publicacion)===selDay);
+    html+=`<div style="margin-bottom:12px;"><button onclick="selDay=null;render()" style="background:none;border:1px solid #222;color:#888;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:11px;">← Semana</button></div>`;
+    items.filter(p=>p.estado!=='publicado').forEach(p=>html+=cardHTML(p));
+    items.filter(p=>p.estado==='publicado').forEach(p=>html+=cardHTML(p));
+  } else if(period==='mes'){
+    // Compact rows grouped by date
     const byDate={};
-    const items=period==='semana'&&selDay ? data.filter(p=>(p._fecha||p.fecha_publicacion)===selDay) : data;
-    items.forEach(p=>{
-      const d=p.fecha_publicacion||p._fecha||'Sin fecha';
+    data.forEach(p=>{
+      const d=p.fecha_publicacion||'Sin fecha';
       if(!byDate[d]) byDate[d]=[];
       byDate[d].push(p);
     });
     const dates=Object.keys(byDate).sort();
-    if(period==='semana'&&selDay){
-      // Back button
-      html+=`<div style="margin-bottom:12px;"><button onclick="selDay=null;render()" style="background:none;border:1px solid #222;color:#888;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:11px;">← Semana</button></div>`;
-    }
     dates.forEach(d=>{
       const dt=new Date(d+'T12:00:00');
       const today=isToday(d);
-      html+=`<div class="date-header ${today?'today':''}">${DIAS[dt.getDay()]} ${dt.getDate()} ${MESES[dt.getMonth()]} <span style="font-size:11px;color:#555;">${byDate[d].length} piezas</span></div>`;
-      const pending=byDate[d].filter(p=>p.estado!=='publicado');
-      const pub=byDate[d].filter(p=>p.estado==='publicado');
-      pending.forEach(p=>{ html+=cardHTML(p); });
-      pub.forEach(p=>{ html+=cardHTML(p); });
+      const pending=byDate[d].filter(p=>p.estado!=='publicado').length;
+      const done=byDate[d].filter(p=>p.estado==='publicado').length;
+      html+=`<div class="date-header ${today?'today':''}" style="cursor:pointer;" onclick="period='hoy';currentDate=new Date('${d}T12:00:00');document.querySelectorAll('.period-btn').forEach(e=>e.classList.toggle('active',e.dataset.p==='hoy'));load()">
+        ${DIAS[dt.getDay()]} ${dt.getDate()}
+        <span style="font-size:11px;color:#555;">${pending?pending+' pendiente'+(pending>1?'s':''):''} ${done?'· '+done+' ✓':''}</span>
+      </div>`;
+      byDate[d].forEach(p=>{
+        const pub=p.estado==='publicado';
+        html+=`<div class="row ${pub?'pub':''}">
+          <span class="row-time">${p.hora_publicacion||''}</span>
+          <span class="row-client">${p._client||p.client_name||''}</span>
+          <span class="row-title">${p.titulo||'Sin título'}</span>
+          <span class="row-badge">${p.tipo_pedido==='historias'?'H':'G'}</span>
+          ${pub?'<span class="row-done">✓</span>':`<button class="row-btn" onclick="publicar(${p.id},this)">Publicar</button>`}
+        </div>`;
+      });
     });
   } else {
     // Hoy: split historias vs grilla
