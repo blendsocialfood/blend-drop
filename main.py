@@ -117,6 +117,22 @@ def api_mes():
     except Exception as e:
         return jsonify({'error': str(e)}), 502
 
+@app.route('/api/deshacer', methods=['POST'])
+def api_deshacer():
+    if 'user' not in session:
+        return jsonify({'error': 'no auth'}), 401
+    data = request.json or {}
+    pieza_id = data.get('pieza_id')
+    if not pieza_id:
+        return jsonify({'error': 'pieza_id requerido'}), 400
+    token = generate_token(session['user'], session['role'])
+    try:
+        r = http_requests.post(f'{UNITY_URL}/api/drop/deshacer',
+            json={'token': token, 'pieza_id': pieza_id}, timeout=10)
+        return jsonify(r.json()), r.status_code
+    except Exception as e:
+        return jsonify({'error': str(e)}), 502
+
 @app.route('/api/publicar', methods=['POST'])
 def api_publicar():
     if 'user' not in session:

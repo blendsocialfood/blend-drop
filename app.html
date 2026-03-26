@@ -65,7 +65,8 @@ body { background:#000; color:#eee; font-family:'Inter',sans-serif; min-height:1
 .btn-dl:hover { color:#eee; border-color:#555; }
 .btn-pub { background:#1a0000; border:1px solid #DC2626; color:#DC2626; padding:5px 10px; border-radius:6px; cursor:pointer; font-size:11px; font-weight:600; transition:all .15s; }
 .btn-pub:hover { background:#DC2626; color:#fff; }
-.btn-done { background:#071a07; border:1px solid #22c55e; color:#22c55e; padding:5px 10px; border-radius:6px; font-size:11px; font-weight:600; cursor:default; }
+.btn-done { background:#071a07; border:1px solid #22c55e; color:#22c55e; padding:5px 10px; border-radius:6px; font-size:11px; font-weight:600; cursor:pointer; transition:all .15s; }
+.btn-done:hover { background:#1a0000; border-color:#DC2626; color:#DC2626; }
 
 /* Week grid */
 .week-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; margin-bottom:16px; }
@@ -390,7 +391,7 @@ function cardHTML(p){
     ?`<img class="card-thumb" src="${UNITY_URL}/api/drive/thumb/${p.drive_file_id}?size=small" loading="lazy" onerror="this.outerHTML='<div class=card-thumb-placeholder>📷</div>'">`
     :'<div class="card-thumb-placeholder">📷</div>';
   const dl=p.drive_file_id?`<a href="${UNITY_URL}/api/drive/file/${p.drive_file_id}" target="_blank" class="btn-dl">⬇</a>`:'';
-  const btn=pub?'<div class="btn-done">✓</div>':`<button class="btn-pub" onclick="publicar(${p.id},this)">Publicar</button>`;
+  const btn=pub?`<button class="btn-done" onclick="despublicar(${p.id},this)" title="Deshacer">✓</button>`:`<button class="btn-pub" onclick="publicar(${p.id},this)">Publicar</button>`;
 
   let badges='';
   if(p.tipo_pedido) badges+=`<span class="badge badge-tipo">${p.tipo_pedido==='historias'?'Historia':'Grilla'}</span>`;
@@ -419,6 +420,15 @@ async function publicar(pid,btn){
     if(r.ok){ toast('Publicado'); load(); }
     else{ const d=await r.json(); alert(d.error||'Error'); btn.disabled=false; btn.textContent='Publicar'; }
   }catch(e){ alert('Error: '+e.message); btn.disabled=false; btn.textContent='Publicar'; }
+}
+
+async function despublicar(pid,btn){
+  btn.disabled=true; btn.textContent='...';
+  try{
+    const r=await fetch('/api/deshacer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pieza_id:pid})});
+    if(r.ok){ toast('Deshecho'); load(); }
+    else{ const d=await r.json(); alert(d.error||'Error'); btn.disabled=false; btn.textContent='✓'; }
+  }catch(e){ alert('Error: '+e.message); btn.disabled=false; btn.textContent='✓'; }
 }
 
 // Init
