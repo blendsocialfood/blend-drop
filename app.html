@@ -9,10 +9,24 @@
 * { margin:0; padding:0; box-sizing:border-box; }
 body { background:#000; color:#eee; font-family:'Inter',sans-serif; min-height:100vh; }
 
-.nav-sf { position:fixed; top:0; left:0; right:0; height:44px; background:#0a0a0a; border-bottom:1px solid #1a1a1a; display:flex; align-items:center; padding:0 16px; z-index:1000; gap:12px; }
-.nav-sf a { color:#555; font-size:11px; text-decoration:none; font-weight:500; padding:4px 8px; border-radius:6px; transition:all .15s; }
-.nav-sf a:hover { color:#ccc; background:#1a1a1a; }
-.nav-sf .active { color:#DC2626; }
+.sf-topbar{position:fixed;top:0;left:0;right:0;z-index:10000;display:flex;align-items:center;justify-content:space-between;padding:10px 24px;background:rgba(8,8,8,0.92);backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,0.04);}
+.sf-topbar-left{display:flex;align-items:center;gap:20px;overflow-x:auto;scrollbar-width:none;}
+.sf-topbar-left::-webkit-scrollbar{display:none;}
+.sf-nav-link{display:flex;align-items:center;gap:6px;text-decoration:none;padding:6px 14px;border-radius:10px;transition:all 0.3s;border:1px solid transparent;}
+.sf-nav-link.active{background:rgba(220,38,38,0.08);border-color:rgba(220,38,38,0.2);}
+.sf-nav-link:not(.active):hover{background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.08);}
+.sf-nav-icon{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:#fff;}
+.sf-nav-label{font-size:12px;font-weight:600;color:#888;letter-spacing:0.3px;}
+.sf-nav-link.active .sf-nav-label{color:#ddd;}
+.sf-nav-icon.ic-sf{background:linear-gradient(145deg,#151515,#0d0d0d);border:1px solid rgba(255,255,255,0.1);font-size:11px;}
+.sf-nav-dot{display:inline-block;width:4px;height:4px;background:#EA580C;border-radius:50%;}
+.sf-nav-icon.ic-unity{background:linear-gradient(135deg,rgba(234,88,12,0.2),rgba(234,88,12,0.05));border:1px solid rgba(234,88,12,0.25);font-size:14px;}
+.sf-nav-icon.ic-copilot{background:linear-gradient(135deg,rgba(59,130,246,0.2),rgba(59,130,246,0.05));border:1px solid rgba(59,130,246,0.25);font-size:14px;}
+.sf-nav-icon.ic-prism{background:linear-gradient(135deg,rgba(28,130,180,0.2),rgba(28,130,180,0.05));border:1px solid rgba(28,130,180,0.25);font-size:14px;}
+.sf-nav-icon.ic-pixel{background:linear-gradient(135deg,rgba(245,158,11,0.2),rgba(245,158,11,0.05));border:1px solid rgba(245,158,11,0.25);font-size:14px;}
+.sf-nav-icon.ic-drop{background:linear-gradient(135deg,rgba(220,38,38,0.2),rgba(220,38,38,0.05));border:1px solid rgba(220,38,38,0.25);font-size:14px;}
+.sf-nav-icon.ic-firsttouch{background:linear-gradient(135deg,rgba(168,85,247,0.2),rgba(168,85,247,0.05));border:1px solid rgba(168,85,247,0.25);font-size:14px;}
+@media(max-width:1024px){.sf-topbar{display:none!important;}}
 
 .app { max-width:800px; margin:60px auto 40px; padding:0 16px; }
 
@@ -118,10 +132,24 @@ body { background:#000; color:#eee; font-family:'Inter',sans-serif; min-height:1
 </head>
 <body>
 
-<div class="nav-sf">
-  <a href="#" class="active" style="color:#DC2626;font-weight:700;">🚀 Drop</a>
-  <a href="#" id="nav-os">SF</a>
-  <a href="#" id="nav-unity">Unity</a>
+<div class="sf-topbar">
+  <div class="sf-topbar-left">
+    <a href="#" id="nav-os" class="sf-nav-link">
+      <div class="sf-nav-icon ic-sf">SF<span class="sf-nav-dot"></span></div>
+      <span class="sf-nav-label">Hub</span>
+    </a>
+    <a href="#" id="nav-unity" class="sf-nav-link">
+      <div class="sf-nav-icon ic-unity">&#9881;</div>
+      <span class="sf-nav-label">Unity</span>
+    </a>
+    <a href="#" class="sf-nav-link active">
+      <div class="sf-nav-icon ic-drop">&#128640;</div>
+      <span class="sf-nav-label">Drop</span>
+    </a>
+  </div>
+  <a href="#" class="sf-nav-link" style="padding:6px 14px;">
+    <span class="sf-nav-label" style="color:#444;">Salir</span>
+  </a>
 </div>
 
 <div class="app">
