@@ -20,6 +20,7 @@ OS_URL = os.environ.get('OS_URL', 'https://socialfood-os-production.up.railway.a
 AUTH_SECRET = 'blendsf-auth-2026'
 
 DB_PATH = os.environ.get('DB_PATH', '/data/blend_drop.db')
+os.makedirs(os.path.dirname(DB_PATH) or '.', exist_ok=True)
 META_TOKEN = os.environ.get('META_TOKEN', '')
 META_BM_ID = os.environ.get('META_BM_ID', '')
 ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
