@@ -96,6 +96,9 @@ body { background:#000; color:#eee; font-family:'Inter',sans-serif; min-height:1
 .chip-pub { background:#051505; color:#4ade80; border:1px solid #0a3a0a; }
 .chip-sched { background:#1a1400; color:#fbbf24; border:1px solid #2a2000; }
 .chip-manual { background:#1a0000; color:#f87171; border:1px solid #2a0000; }
+.chip-pending { background:#111; color:#555; border:1px solid #222; }
+.chip-check { background:#0a0a1a; color:#818cf8; border:1px solid #1a1a2a; }
+.chip-ajustes { background:#1a0a00; color:#fb923c; border:1px solid #2a1500; }
 .chip-tipo { font-size:11px; padding:2px 7px; border-radius:5px; }
 .ct-grilla { background:#0a1a0a; color:#4ade80; }
 .ct-carr { background:#0a0a1a; color:#818cf8; }
@@ -505,19 +508,29 @@ function render() {
   document.getElementById('content').innerHTML = html;
 }
 
+const ESTADO_CHIP = {
+  'publicado':      '<span class="chip chip-pub">\u2713 Publicado</span>',
+  'aprobado_final': '<span class="chip chip-sched">\u2713 Aprobado</span>',
+  'check_cliente':  '<span class="chip chip-check">\u23f3 Check cliente</span>',
+  'check_interno':  '<span class="chip chip-check">\u23f3 Check interno</span>',
+  'ajustes_1':      '<span class="chip chip-ajustes">\u270f Ajustes</span>',
+  'ajustes_2':      '<span class="chip chip-ajustes">\u270f Ajustes</span>',
+  'en_proceso':     '<span class="chip chip-pending">\u25cb En proceso</span>',
+};
+
 function cardHTML(p) {
   const pub = p.estado === 'publicado';
+  const aprobado = p.estado === 'aprobado_final';
   const es_hist = p.tipo_pedido === 'historias';
   const thumb = p.drive_file_id
     ? '<img class="thumb" src="'+UNITY_URL+'/api/drive/thumb/'+p.drive_file_id+'?size=small" loading="lazy" onerror="this.outerHTML=\'<div class=thumb-ph>\u{1F4F7}</div>\'">'
     : '<div class="thumb-ph">\u{1F4F7}</div>';
-  const chipEstado = pub
-    ? '<span class="chip chip-pub">\u2713 Publicado</span>'
-    : (es_hist ? '<span class="chip chip-manual">\u26a0 Manual</span>' : '<span class="chip chip-sched">\u23f1 '+(p.hora_publicacion||'--:--')+'</span>');
+  const chipEstado = ESTADO_CHIP[p.estado] || '<span class="chip chip-pending">'+p.estado+'</span>';
   const tipoClass = es_hist?'ct-hist':p.tipo_pedido==='carrusel'?'ct-carr':p.tipo_pedido==='reel'?'ct-reel':'ct-grilla';
   const tipoBadge = '<span class="chip-tipo '+tipoClass+'">'+(p.tipo_pedido||'grilla')+'</span>';
 
-  return '<div class="card'+(pub?' pub':'')+'" onclick="openPieza('+p.id+')">'
+  const clickable = aprobado || pub || es_hist;
+  return '<div class="card'+(pub?' pub':'')+'" '+(clickable?'onclick="openPieza('+p.id+')"':'style="cursor:default;opacity:.6"')+'>'
     +thumb
     +'<div class="card-info">'
     +'<div style="display:flex;gap:6px;align-items:center;margin-bottom:4px;">'

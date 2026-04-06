@@ -286,7 +286,7 @@ def api_hoy():
     token = generate_token(session['user'], session['role'])
     try:
         r = http_requests.get(f'{UNITY_URL}/api/piezas-publicar',
-            params={'fecha': fecha, 'token': token}, timeout=10)
+            params={'fecha': fecha, 'token': token, 'all': 'true'}, timeout=10)
         return jsonify(r.json()), r.status_code
     except Exception as e:
         return jsonify({'error': str(e)}), 502
