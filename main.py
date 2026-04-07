@@ -26,11 +26,17 @@ META_TOKEN_NICO = os.environ.get('META_TOKEN_NICO', '') # Token personal Nico
 META_BM_ID = os.environ.get('META_BM_ID', '')
 
 def get_meta_token_for_client(client_id):
-    """Retorna el token Meta correcto según el cliente."""
+    """Retorna el token Meta correcto según el cliente.
+    Primero revisa token_key en BD, luego fallback a mapeo hardcodeado."""
+    # Clientes que usan token personal de Nico
+    NICO_CLIENTS = {2, 4}  # Buona Pizza, Fuente Mardoqueo
     conn = get_db()
     row = conn.execute("SELECT token_key FROM client_ig_accounts WHERE client_id=?", (client_id,)).fetchone()
     conn.close()
-    key = row['token_key'] if row and row['token_key'] else 'system'
+    if row and row['token_key']:
+        key = row['token_key']
+    else:
+        key = 'nico' if int(client_id) in NICO_CLIENTS else 'system'
     return META_TOKEN_NICO if key == 'nico' else META_TOKEN
 ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
 DROP_URL = os.environ.get('DROP_URL', 'https://blend-drop-production.up.railway.app')
