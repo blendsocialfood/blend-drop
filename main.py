@@ -21,8 +21,17 @@ AUTH_SECRET = 'blendsf-auth-2026'
 
 DB_PATH = os.environ.get('DB_PATH', '/data/blend_drop.db')
 os.makedirs(os.path.dirname(DB_PATH) or '.', exist_ok=True)
-META_TOKEN = os.environ.get('META_TOKEN', '')
+META_TOKEN = os.environ.get('META_TOKEN', '')          # System User "Drop"
+META_TOKEN_NICO = os.environ.get('META_TOKEN_NICO', '') # Token personal Nico
 META_BM_ID = os.environ.get('META_BM_ID', '')
+
+def get_meta_token_for_client(client_id):
+    """Retorna el token Meta correcto según el cliente."""
+    conn = get_db()
+    row = conn.execute("SELECT token_key FROM client_ig_accounts WHERE client_id=?", (client_id,)).fetchone()
+    conn.close()
+    key = row['token_key'] if row and row['token_key'] else 'system'
+    return META_TOKEN_NICO if key == 'nico' else META_TOKEN
 ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
 DROP_URL = os.environ.get('DROP_URL', 'https://blend-drop-production.up.railway.app')
 MEDIA_DIR = '/tmp/drop_media'
@@ -76,10 +85,17 @@ def init_db():
             client_name TEXT,
             ig_user_id TEXT NOT NULL,
             ig_username TEXT,
+            token_key TEXT DEFAULT 'system',
             updated_at TEXT DEFAULT (datetime('now'))
         )
     """)
     conn.commit()
+    # Migración: agregar token_key si no existe
+    try:
+        conn.execute("ALTER TABLE client_ig_accounts ADD COLUMN token_key TEXT DEFAULT 'system'")
+        conn.commit()
+    except Exception:
+        pass
     conn.close()
     print("[DROP] init_db OK")
 
@@ -126,8 +142,10 @@ def download_drive_file(drive_file_id, token):
 
 # ── Meta API publish ──
 
-def publish_piece(pieza_id, ig_user_id, copy_text, token):
+def publish_piece(pieza_id, ig_user_id, copy_text, token, meta_token=None):
     """Crea container Meta y publica. Retorna {'ok': True} o {'ok': False, 'error': str}."""
+    if not meta_token:
+        meta_token = META_TOKEN
     # 1. Obtener pieza
     try:
         r = http_requests.get(f'{UNITY_URL}/api/pieza-detail/{pieza_id}',
@@ -155,7 +173,7 @@ def publish_piece(pieza_id, ig_user_id, copy_text, token):
     try:
         if tipo == 'reel':
             params = {
-                'access_token': META_TOKEN,
+                'access_token': meta_token,
                 'caption': caption,
                 'media_type': 'REELS',
                 'video_url': media_url,
@@ -163,7 +181,7 @@ def publish_piece(pieza_id, ig_user_id, copy_text, token):
             }
         else:  # grilla / carrusel (imagen principal por ahora; carrusel multi en v2.1)
             params = {
-                'access_token': META_TOKEN,
+                'access_token': meta_token,
                 'caption': caption,
                 'image_url': media_url,
             }
@@ -183,7 +201,7 @@ def publish_piece(pieza_id, ig_user_id, copy_text, token):
                 time.sleep(5)
                 status_r = http_requests.get(
                     f'https://graph.facebook.com/v21.0/{container_id}',
-                    params={'fields': 'status_code', 'access_token': META_TOKEN}
+                    params={'fields': 'status_code', 'access_token': meta_token}
                 )
                 if status_r.json().get('status_code') == 'FINISHED':
                     break
@@ -191,7 +209,7 @@ def publish_piece(pieza_id, ig_user_id, copy_text, token):
         # 5. Publicar
         pub_r = http_requests.post(
             f'https://graph.facebook.com/v21.0/{ig_user_id}/media_publish',
-            params={'creation_id': container_id, 'access_token': META_TOKEN},
+            params={'creation_id': container_id, 'access_token': meta_token},
             timeout=30
         )
         pub_data = pub_r.json()
@@ -233,7 +251,8 @@ def cron_publish():
         conn.close()
 
         token = generate_token('drop-cron', 'admin')
-        result = publish_piece(post['pieza_id'], post['ig_user_id'], '', token)
+        meta_tok = get_meta_token_for_client(post['client_id'])
+        result = publish_piece(post['pieza_id'], post['ig_user_id'], '', token, meta_token=meta_tok)
 
         conn = get_db()
         if result.get('ok'):
@@ -443,7 +462,8 @@ def api_publicar_ahora():
     if not ig_row:
         return jsonify({'error': 'No hay cuenta IG configurada para este cliente'}), 400
 
-    result = publish_piece(pieza_id, ig_row['ig_user_id'], copy_text, token)
+    meta_tok = get_meta_token_for_client(client_id)
+    result = publish_piece(pieza_id, ig_row['ig_user_id'], copy_text, token, meta_token=meta_tok)
     if result.get('ok'):
         try:
             http_requests.post(f'{UNITY_URL}/api/drop/publicar',
@@ -562,9 +582,9 @@ def api_ig_accounts_save():
         return jsonify({'error': 'client_id e ig_user_id requeridos'}), 400
     conn = get_db()
     conn.execute("""
-        INSERT OR REPLACE INTO client_ig_accounts (client_id, client_name, ig_user_id, ig_username, updated_at)
-        VALUES (?, ?, ?, ?, datetime('now'))
-    """, (data['client_id'], data.get('client_name', ''), data['ig_user_id'], data.get('ig_username', '')))
+        INSERT OR REPLACE INTO client_ig_accounts (client_id, client_name, ig_user_id, ig_username, token_key, updated_at)
+        VALUES (?, ?, ?, ?, ?, datetime('now'))
+    """, (data['client_id'], data.get('client_name', ''), data['ig_user_id'], data.get('ig_username', ''), data.get('token_key', 'system')))
     conn.commit()
     conn.close()
     return jsonify({'ok': True})
