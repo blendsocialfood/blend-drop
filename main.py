@@ -528,75 +528,103 @@ def api_generate_copy():
         return jsonify({'error': 'No se pudo obtener la pieza desde Unity'}), 502
 
     cliente = pieza.get('cliente', {})
-    sticker_map = {
-        'encuesta': 'Encuesta (pregunta + 2 opciones)',
-        'slide': 'Slide (frase para deslizar)',
-        'box': 'Box (pregunta abierta)',
-        'emoji': 'Emoji slider',
-        'ubicacion': 'Ubicación',
-        'reserva': 'Enlace a reserva',
-        'no_usa': 'Sin sticker'
-    }
-    sticker_tipo = sticker_map.get(pieza.get('stickers', 'no_usa'), 'Sin sticker')
-
     tipo = pieza.get('tipo_pedido', 'grilla')
     stickers_val = pieza.get('stickers', 'no_usa')
-
-    # Instrucciones de sticker según tipo
-    sticker_instructions = {
-        'encuesta': 'Genera una pregunta + 2 opciones breves para sticker Encuesta.',
-        'slide': 'Genera una frase que invite a deslizar (max 1 línea).',
-        'box': 'Genera una pregunta abierta para sticker Box.',
-        'emoji': 'Genera una frase que invite a reaccionar con emoji slider.',
-        'ubicacion': 'El texto del sticker es solo la instrucción: "Agrega la ubicación: [nombre del local, ciudad]".',
-        'reserva': 'El texto del sticker es solo la instrucción: "Agrega el link de reserva: [url]".',
-        'no_usa': 'Sin sticker — solo copy de la historia (max 3 líneas, casual, emoji al final).',
-    }
-    sticker_instr = sticker_instructions.get(stickers_val, '')
-
     delivery_si = cliente.get('delivery')
-    cta_delivery = f'Termina con: "Pídelo ahora por [plataforma] 🛵 — si lo viste en nuestro anuncio, el link está en la bio."' if delivery_si else ''
-    cta_ads = f'Siempre incluir mención sutil a ads al final: "¿Lo viste en nuestros anuncios? Encuentra más en {cliente.get("url_web", "el link de la bio")}."'
+    url_web = cliente.get('url_web', 'el link de la bio')
 
-    sticker_section = f"\n--- TEXTO STICKER ---\n[texto del sticker]" if tipo == "historias" else ""
+    # Longitud de caption según formato
+    longitud_regla = {
+        'grilla':    'Entre 80 y 220 palabras. Hook + cuerpo + CTA + hashtags.',
+        'historias': 'Máximo 3 líneas de texto sobre la imagen. Casual. Emoji al final. Sin hashtags.',
+        'extra':     'Entre 80 y 220 palabras. Hook + cuerpo + CTA + hashtags.',
+        'ads':       'Máximo 125 caracteres en la primera línea (lo que ve el usuario sin expandir). CTA directo. Máximo 3 hashtags.',
+    }.get(tipo, 'Entre 80 y 150 palabras.')
 
-    prompt = f"""Eres un copywriter experto en gastronomía chilena para redes sociales. Genera copy de Instagram listo para publicar.
+    # Instrucción de sticker
+    sticker_instrucciones = {
+        'encuesta': 'Genera una pregunta directa + 2 opciones cortas (máx 3 palabras cada una) para el sticker Encuesta.',
+        'slide':    'Genera una sola frase (máx 6 palabras) que invite a deslizar el emoji slider.',
+        'box':      'Genera una pregunta abierta corta (máx 8 palabras) para el sticker caja de preguntas.',
+        'emoji':    'Genera una frase de máx 8 palabras que invite a reaccionar con el emoji slider.',
+        'ubicacion':'Solo escribe: "Agrega la ubicación: {nombre}, {ciudad}" — nada más.',
+        'reserva':  'Solo escribe: "Agrega el link de reserva en el sticker" — nada más.',
+        'no_usa':   'No hay sticker. El texto va directo sobre la imagen.',
+    }
+    sticker_instr = sticker_instrucciones.get(stickers_val, '')
 
-CLIENTE: {cliente.get('nombre', '')}
+    cta_delivery = 'Pídelo ahora 🛵 — link en bio.' if delivery_si else ''
+    cta_ads = f'¿Lo viste en nuestros anuncios? Encuéntranos en {url_web}.'
+
+    sticker_section = '\n\n--- TEXTO STICKER ---\n[texto del sticker]' if tipo == 'historias' else ''
+
+    prompt = f"""Eres un copywriter experto en gastronomía chilena. Tu única tarea es escribir copy de Instagram listo para copiar y pegar, sin ningún tipo de explicación, análisis ni comentario.
+
+DATOS DEL CLIENTE
+Nombre: {cliente.get('nombre', '')}
 Voz de marca: {cliente.get('voz_marca', '')}
-Restricciones (bloqueos duros, nunca violar): {cliente.get('restricciones', 'ninguna')}
+Atributo superior: {cliente.get('atributo_superior', '')}
 Horarios: {cliente.get('horarios', '')}
 Delivery: {'Sí' if delivery_si else 'No'}
-Atributo superior: {cliente.get('atributo_superior', '')}
-URL web: {cliente.get('url_web', '')}
+URL web: {url_web}
+Restricciones (NUNCA violar): {cliente.get('restricciones', 'ninguna')}
 
-PIEZA: {pieza.get('titulo', '')}
+DATOS DE LA PIEZA
+Título: {pieza.get('titulo', '')}
 Descripción: {pieza.get('descripcion', '')}
-Tipo: {tipo} | Pilar: {pieza.get('pilar', '')}
-Sticker: {stickers_val} — {sticker_instr}
+Tipo: {tipo}
+Pilar: {pieza.get('pilar', '')}
+Sticker: {stickers_val}
 
-REGLAS:
-- Empieza con un hook potente (nunca precio, nombre ni hashtag al inicio)
-- Español chileno neutro, directo, sin solemnidad
-- {cta_delivery if cta_delivery else 'No hay delivery'}
-- {cta_ads}
-- Máximo 8 hashtags curados (2 marca, 2 nicho, 2 contenido, 2 momento)
-- Para historias: máx 3 líneas, casual, emoji al final
-- Usa un hook diferente en cada opción (Valor / Curiosidad / Historia / Contrarian / Social Proof)
+REGLAS DE ESCRITURA — todas obligatorias, sin excepción:
 
-FORMATO DE RESPUESTA — texto plano, sin markdown, sin negritas, sin etiquetas internas:
+HOOK (primera línea):
+- Máximo 8 palabras
+- PROHIBIDO empezar con: el nombre del restaurante, un precio, un hashtag, un emoji, "hoy", "bienvenidos", "hola"
+- Debe generar curiosidad, urgencia o prometer algo concreto
+- Sin emojis en la primera línea
+- Usa hooks distintos en cada opción: Valor / Curiosidad / Historia / Contrarian / Social Proof
+
+CUERPO:
+- {longitud_regla}
+- Salto de línea entre hook, cuerpo y CTA — nunca bloques de texto corrido
+- Menciona al menos un detalle específico: ingrediente, proceso, horario, ubicación o número real
+- Español chileno neutro — directo, sin solemnidad, sin "usted", sin Spanglish
+
+CTA:
+- {cta_delivery if cta_delivery else 'Sin delivery. CTA hacia reserva o visita al local.'}
+- Ads: {cta_ads}
+- El CTA debe tener contexto. Nunca solo "Reserva ahora" o "Link en bio" sueltos.
+- Si hay escasez real (mesas limitadas, solo hoy, stock), inclúyela en el CTA.
+- Agrega "Guarda esto para el fin de semana 📌" como CTA secundario cuando aplique.
+
+HASHTAGS:
+- Exactamente entre 3 y 5 hashtags. Ni uno más.
+- Mezcla obligatoria: 1 de marca + 1-2 de ciudad/zona + 1-2 de nicho
+- PROHIBIDO repetir el mismo hashtag entre opción principal y alternativa
+- Van al final, en una sola línea, separados por espacio
+- Para historias: sin hashtags
+
+PROHIBICIONES ABSOLUTAS:
+- Cero markdown: sin **, sin ##, sin guiones al inicio de línea como formato
+- Cero etiquetas internas como "Hook:", "Cuerpo:", "CTA:", "Opción 1:"
+- Cero explicaciones, comentarios o análisis antes o después del copy
+- Cero pensamiento visible ("voy a generar...", "aquí el copy...", "según las reglas...")
+- Cero hashtags duplicados entre las dos opciones
+
+FORMATO DE SALIDA — exactamente así, nada más:
 
 --- OPCIÓN PRINCIPAL ---
-[copy]
+[copy listo para publicar]
 
 --- OPCIÓN ALTERNATIVA ---
-[copy con hook diferente]{sticker_section}"""
+[copy con hook diferente y hashtags distintos]{sticker_section}"""
 
     try:
         client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
         msg = client.messages.create(
             model='claude-haiku-4-5-20251001',
-            max_tokens=1024,
+            max_tokens=1200,
             messages=[{'role': 'user', 'content': prompt}]
         )
         return jsonify({'copy': msg.content[0].text})
