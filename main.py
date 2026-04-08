@@ -558,49 +558,39 @@ def api_generate_copy():
     cta_delivery = f'Termina con: "Pídelo ahora por [plataforma] 🛵 — si lo viste en nuestro anuncio, el link está en la bio."' if delivery_si else ''
     cta_ads = f'Siempre incluir mención sutil a ads al final: "¿Lo viste en nuestros anuncios? Encuentra más en {cliente.get("url_web", "el link de la bio")}."'
 
-    prompt = f"""Eres un copywriter experto en gastronomía chilena para redes sociales. Genera copy de Instagram.
+    sticker_section = f"\n--- TEXTO STICKER ---\n[texto del sticker]" if tipo == "historias" else ""
 
-## Datos del cliente
-- Nombre: {cliente.get('nombre', '')}
-- Voz de marca: {cliente.get('voz_marca', '')}
-- Restricciones (BLOQUEOS DUROS): {cliente.get('restricciones', 'ninguna')}
-- Horarios: {cliente.get('horarios', '')}
-- Delivery: {'Sí' if delivery_si else 'No'}
-- Atributo superior: {cliente.get('atributo_superior', '')}
-- URL web: {cliente.get('url_web', '')}
+    prompt = f"""Eres un copywriter experto en gastronomía chilena para redes sociales. Genera copy de Instagram listo para publicar.
 
-## Pieza
-- Título: {pieza.get('titulo', '')}
-- Descripción: {pieza.get('descripcion', '')}
-- Tipo: {tipo}
-- Pilar: {pieza.get('pilar', '')}
-- Sticker: {stickers_val} — {sticker_instr}
+CLIENTE: {cliente.get('nombre', '')}
+Voz de marca: {cliente.get('voz_marca', '')}
+Restricciones (bloqueos duros, nunca violar): {cliente.get('restricciones', 'ninguna')}
+Horarios: {cliente.get('horarios', '')}
+Delivery: {'Sí' if delivery_si else 'No'}
+Atributo superior: {cliente.get('atributo_superior', '')}
+URL web: {cliente.get('url_web', '')}
 
-## Reglas OBLIGATORIAS
-1. Empieza siempre con un hook (NUNCA con el precio, el nombre o un hashtag)
-2. Usa español chileno neutro — natural, no "usted", no "vos", no Spanglish
-3. {cta_delivery}
-4. {cta_ads}
-5. Máximo 8 hashtags (2 marca, 2 nicho, 2 contenido, 2 momento)
-6. Respeta SIEMPRE las restricciones del cliente — son bloqueos duros
-7. Para historias: copy máx 3 líneas, casual, con emoji al final
+PIEZA: {pieza.get('titulo', '')}
+Descripción: {pieza.get('descripcion', '')}
+Tipo: {tipo} | Pilar: {pieza.get('pilar', '')}
+Sticker: {stickers_val} — {sticker_instr}
 
-## Hooks disponibles (elige uno distinto por opción)
-- Valor: "El [X] que [resultado] (sin [dolor]):"
-- Curiosidad: "Lo que nadie te dice sobre [X]"
-- Historia: "La semana pasada [algo inesperado]."
-- Contrarian: "Todos dicen [X]. Nosotros hacemos [Y]."
-- Social Proof: "[N] personas ya [acción]."
+REGLAS:
+- Empieza con un hook potente (nunca precio, nombre ni hashtag al inicio)
+- Español chileno neutro, directo, sin solemnidad
+- {cta_delivery if cta_delivery else 'No hay delivery'}
+- {cta_ads}
+- Máximo 8 hashtags curados (2 marca, 2 nicho, 2 contenido, 2 momento)
+- Para historias: máx 3 líneas, casual, emoji al final
+- Usa un hook diferente en cada opción (Valor / Curiosidad / Historia / Contrarian / Social Proof)
 
-## Output esperado
+FORMATO DE RESPUESTA — texto plano, sin markdown, sin negritas, sin etiquetas internas:
+
 --- OPCIÓN PRINCIPAL ---
-[copy completo]
+[copy]
 
 --- OPCIÓN ALTERNATIVA ---
-[copy completo con hook diferente]
-
-{"--- TEXTO STICKER ---" if tipo == "historias" else ""}
-{"[texto del sticker según instrucción arriba]" if tipo == "historias" else ""}"""
+[copy con hook diferente]{sticker_section}"""
 
     try:
         client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
