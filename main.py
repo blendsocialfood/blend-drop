@@ -539,25 +539,68 @@ def api_generate_copy():
     }
     sticker_tipo = sticker_map.get(pieza.get('stickers', 'no_usa'), 'Sin sticker')
 
-    prompt = f"""Usa la skill blend-copywriter para generar copy de Instagram.
+    tipo = pieza.get('tipo_pedido', 'grilla')
+    stickers_val = pieza.get('stickers', 'no_usa')
 
-Cliente: {cliente.get('nombre', '')}
-- voz_marca: {cliente.get('voz_marca', '')}
-- pilar: {pieza.get('pilar', '')}
-- restricciones: {cliente.get('restricciones', 'ninguna')}
-- horarios: {cliente.get('horarios', '')}
-- delivery: {'Sí' if cliente.get('delivery') else 'No'}
-- atributo_superior: {cliente.get('atributo_superior', '')}
-- url_web: {cliente.get('url_web', '')}
+    # Instrucciones de sticker según tipo
+    sticker_instructions = {
+        'encuesta': 'Genera una pregunta + 2 opciones breves para sticker Encuesta.',
+        'slide': 'Genera una frase que invite a deslizar (max 1 línea).',
+        'box': 'Genera una pregunta abierta para sticker Box.',
+        'emoji': 'Genera una frase que invite a reaccionar con emoji slider.',
+        'ubicacion': 'El texto del sticker es solo la instrucción: "Agrega la ubicación: [nombre del local, ciudad]".',
+        'reserva': 'El texto del sticker es solo la instrucción: "Agrega el link de reserva: [url]".',
+        'no_usa': 'Sin sticker — solo copy de la historia (max 3 líneas, casual, emoji al final).',
+    }
+    sticker_instr = sticker_instructions.get(stickers_val, '')
 
-Pieza:
-- titulo: {pieza.get('titulo', '')}
-- descripcion: {pieza.get('descripcion', '')}
-- tipo_pedido: {pieza.get('tipo_pedido', 'grilla')}
-- stickers: {pieza.get('stickers', 'no_usa')} ({sticker_tipo})
-- pilar: {pieza.get('pilar', '')}
+    delivery_si = cliente.get('delivery')
+    cta_delivery = f'Termina con: "Pídelo ahora por [plataforma] 🛵 — si lo viste en nuestro anuncio, el link está en la bio."' if delivery_si else ''
+    cta_ads = f'Siempre incluir mención sutil a ads al final: "¿Lo viste en nuestros anuncios? Encuentra más en {cliente.get("url_web", "el link de la bio")}."'
 
-Genera Opción Principal + Opción Alternativa siguiendo las reglas de la skill."""
+    prompt = f"""Eres un copywriter experto en gastronomía chilena para redes sociales. Genera copy de Instagram.
+
+## Datos del cliente
+- Nombre: {cliente.get('nombre', '')}
+- Voz de marca: {cliente.get('voz_marca', '')}
+- Restricciones (BLOQUEOS DUROS): {cliente.get('restricciones', 'ninguna')}
+- Horarios: {cliente.get('horarios', '')}
+- Delivery: {'Sí' if delivery_si else 'No'}
+- Atributo superior: {cliente.get('atributo_superior', '')}
+- URL web: {cliente.get('url_web', '')}
+
+## Pieza
+- Título: {pieza.get('titulo', '')}
+- Descripción: {pieza.get('descripcion', '')}
+- Tipo: {tipo}
+- Pilar: {pieza.get('pilar', '')}
+- Sticker: {stickers_val} — {sticker_instr}
+
+## Reglas OBLIGATORIAS
+1. Empieza siempre con un hook (NUNCA con el precio, el nombre o un hashtag)
+2. Usa español chileno neutro — natural, no "usted", no "vos", no Spanglish
+3. {cta_delivery}
+4. {cta_ads}
+5. Máximo 8 hashtags (2 marca, 2 nicho, 2 contenido, 2 momento)
+6. Respeta SIEMPRE las restricciones del cliente — son bloqueos duros
+7. Para historias: copy máx 3 líneas, casual, con emoji al final
+
+## Hooks disponibles (elige uno distinto por opción)
+- Valor: "El [X] que [resultado] (sin [dolor]):"
+- Curiosidad: "Lo que nadie te dice sobre [X]"
+- Historia: "La semana pasada [algo inesperado]."
+- Contrarian: "Todos dicen [X]. Nosotros hacemos [Y]."
+- Social Proof: "[N] personas ya [acción]."
+
+## Output esperado
+--- OPCIÓN PRINCIPAL ---
+[copy completo]
+
+--- OPCIÓN ALTERNATIVA ---
+[copy completo con hook diferente]
+
+{"--- TEXTO STICKER ---" if tipo == "historias" else ""}
+{"[texto del sticker según instrucción arriba]" if tipo == "historias" else ""}"""
 
     try:
         client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
@@ -567,6 +610,27 @@ Genera Opción Principal + Opción Alternativa siguiendo las reglas de la skill.
             messages=[{'role': 'user', 'content': prompt}]
         )
         return jsonify({'copy': msg.content[0].text})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 502
+
+@app.route('/api/save-copy', methods=['POST'])
+def api_save_copy():
+    if 'user' not in session:
+        return jsonify({'error': 'no auth'}), 401
+    data = request.json or {}
+    pieza_id = data.get('pieza_id')
+    copy_text = data.get('copy', '')
+    if not pieza_id:
+        return jsonify({'error': 'pieza_id requerido'}), 400
+    token = generate_token(session['user'], session['role'])
+    try:
+        r = http_requests.put(
+            f'{UNITY_URL}/api/piezas/{pieza_id}/copy',
+            json={'copy': copy_text},
+            params={'token': token},
+            timeout=10
+        )
+        return jsonify({'ok': True}) if r.ok else jsonify({'error': 'Unity error'}), 502
     except Exception as e:
         return jsonify({'error': str(e)}), 502
 

@@ -327,8 +327,14 @@ body { background:#000; color:#eee; font-family:'Inter',sans-serif; min-height:1
       <div class="copy-display-label">Texto para el sticker</div>
       <div class="copy-display" id="hist-copy" onclick="copyCopy()"></div>
       <div class="copy-hint">Toca para copiar al portapapeles</div>
+      <div class="ai-box" id="hist-ai-box" style="display:none;">
+        <div class="ai-label">&#10022; Sugerencia IA</div>
+        <div class="ai-text" id="hist-ai-text"></div>
+        <span class="ai-use" id="hist-ai-use-btn" onclick="useHistCopy()" style="display:none;">&#8592; Usar este copy</span>
+      </div>
       <div class="hist-actions">
         <button class="btn-dl" onclick="downloadHistoria()">&#8595; Descargar</button>
+        <button class="btn-ghost" onclick="generateHistCopy()" id="hist-gen-btn">&#10022; Generar copy IA</button>
         <button class="btn-hist-done" onclick="markHistoriaDone()">&#10003; Marcar como publicada</button>
       </div>
     </div>
@@ -674,12 +680,59 @@ function openHistModal(p) {
   }
   document.getElementById('hist-steps').innerHTML = stepsHTML;
   document.getElementById('hist-copy').textContent = p.copy || '(sin copy \u2014 agrega uno desde Unity)';
+  document.getElementById('hist-ai-box').style.display = 'none';
+  document.getElementById('hist-gen-btn').disabled = false;
   document.getElementById('modal-hist').classList.add('open');
 }
 
 function copyCopy() {
   const text = document.getElementById('hist-copy').textContent;
   navigator.clipboard.writeText(text).then(function(){ toast('Copiado al portapapeles \u2713'); });
+}
+
+async function generateHistCopy() {
+  if (!activePieza) return;
+  const box = document.getElementById('hist-ai-box');
+  const aiText = document.getElementById('hist-ai-text');
+  const aiUse = document.getElementById('hist-ai-use-btn');
+  const btn = document.getElementById('hist-gen-btn');
+  box.style.display = 'block';
+  aiText.className = 'ai-text ai-loading';
+  aiText.textContent = 'Generando...';
+  aiUse.style.display = 'none';
+  btn.disabled = true;
+  try {
+    const r = await fetch('/api/generate-copy', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({pieza_id: activePieza.id})
+    });
+    const d = await r.json();
+    aiText.className = 'ai-text';
+    if (d.copy) {
+      aiText.textContent = d.copy;
+      aiUse.style.display = 'inline-block';
+    } else {
+      aiText.textContent = d.error || 'No se pudo generar copy';
+    }
+  } catch(e) {
+    aiText.className = 'ai-text';
+    aiText.textContent = 'Error al generar copy';
+  }
+  btn.disabled = false;
+}
+
+function useHistCopy() {
+  const text = document.getElementById('hist-ai-text').textContent;
+  document.getElementById('hist-copy').textContent = text;
+  document.getElementById('hist-ai-box').style.display = 'none';
+  // Guardar en Unity
+  if (activePieza) {
+    fetch('/api/save-copy', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({pieza_id: activePieza.id, copy: text})
+    }).catch(function(){});
+  }
+  navigator.clipboard.writeText(text).then(function(){ toast('Copy aplicado y copiado \u2713'); });
 }
 
 function downloadHistoria() {
