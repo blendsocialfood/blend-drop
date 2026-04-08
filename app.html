@@ -298,6 +298,7 @@ body { background:#000; color:#eee; font-family:'Inter',sans-serif; min-height:1
       <div class="modal-actions">
         <button class="btn-primary" onclick="schedulePost()">&#128197; Programar</button>
         <button class="btn-secondary" onclick="publishNow()">Publicar ahora</button>
+        <button class="btn-dl" onclick="downloadFeed()">&#8595; Descargar</button>
         <button class="btn-ghost" onclick="closeModal('feed')">Cancelar</button>
       </div>
     </div>
@@ -733,6 +734,11 @@ function useHistCopy() {
     }).catch(function(){});
   }
   navigator.clipboard.writeText(text).then(function(){ toast('Copy aplicado y copiado \u2713'); });
+}
+
+function downloadFeed() {
+  if (!activePieza || !activePieza.drive_file_id) { toast('Sin archivo en Drive', true); return; }
+  window.open(UNITY_URL+'/api/drive/file/'+activePieza.drive_file_id, '_blank');
 }
 
 function downloadHistoria() {
