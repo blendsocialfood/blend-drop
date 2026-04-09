@@ -555,11 +555,12 @@ def api_generate_copy():
 
     # Longitud de caption según formato
     longitud_regla = {
-        'grilla':    'Entre 80 y 220 palabras. Hook + cuerpo + CTA + hashtags.',
-        'historias': 'Máximo 3 líneas de texto sobre la imagen. Casual. Emoji al final. Sin hashtags.',
-        'extra':     'Entre 80 y 220 palabras. Hook + cuerpo + CTA + hashtags.',
-        'ads':       'Máximo 125 caracteres en la primera línea (lo que ve el usuario sin expandir). CTA directo. Máximo 3 hashtags.',
-    }.get(tipo, 'Entre 80 y 150 palabras.')
+        'grilla':    'MÁXIMO 150 caracteres en total (sin contar hashtags). Hook + CTA en 2-3 líneas. Si la descripción lo justifica, máximo 50 palabras. Nunca más.',
+        'historias': 'Sin caption. El texto va en la imagen. NO escribas caption.',
+        'extra':     'MÁXIMO 150 caracteres en total (sin contar hashtags). Hook + CTA en 2-3 líneas.',
+        'ads':       'MÁXIMO 125 caracteres. Una sola idea. CTA directo. Sin rodeos. Máximo 3 hashtags.',
+        'reel':      'MÁXIMO 125 caracteres. El hook va en el video, no en el texto. Solo nombra el plato/concepto + CTA.',
+    }.get(tipo, 'MÁXIMO 150 caracteres. Hook + CTA. Sin rodeos.')
 
     # Instrucción de sticker
     sticker_instrucciones = {
@@ -605,32 +606,37 @@ HOOK (primera línea):
 - Sin emojis en la primera línea
 - Usa hooks distintos en cada opción: Valor / Curiosidad / Historia / Contrarian / Social Proof
 
-CUERPO:
+LONGITUD — REGLA MÁS IMPORTANTE:
 - {longitud_regla}
-- Salto de línea entre hook, cuerpo y CTA — nunca bloques de texto corrido
-- Menciona al menos un detalle específico: ingrediente, proceso, horario, ubicación o número real
+- Si el copy supera ese límite, está MAL. Recórtalo. No hay excepción.
+- Cada palabra que sobre es engagement perdido. Sé brutal con lo que cortas.
+
+ESTRUCTURA:
+- Hook (1 línea) → salto → CTA (1 línea) → salto → hashtags
+- Si hay algo más que decir, va entre hook y CTA, máximo 1 línea adicional
+- NUNCA bloques de texto corrido
+- Menciona un detalle específico real: ingrediente, número, horario o proceso — en el hook o CTA
 - Español chileno neutro — directo, sin solemnidad, sin "usted", sin Spanglish
 
 CTA:
-- {cta_delivery if cta_delivery else 'Sin delivery. CTA hacia reserva o visita al local.'}
-- Ads: {cta_ads}
-- El CTA debe tener contexto. Nunca solo "Reserva ahora" o "Link en bio" sueltos.
-- Si hay escasez real (mesas limitadas, solo hoy, stock), inclúyela en el CTA.
-- Agrega "Guarda esto para el fin de semana 📌" como CTA secundario cuando aplique.
+- {cta_delivery if cta_delivery else 'CTA hacia reserva o visita al local.'}
+- {cta_ads}
+- Nunca solo "Link en bio" o "Reserva ahora" solos — siempre con contexto de 3-5 palabras más
+- "Guarda esto para el fin de semana 📌" cuando aplique como CTA secundario
 
 HASHTAGS:
-- Exactamente entre 3 y 5 hashtags. Ni uno más.
-- Mezcla obligatoria: 1 de marca + 1-2 de ciudad/zona + 1-2 de nicho
-- PROHIBIDO repetir el mismo hashtag entre opción principal y alternativa
-- Van al final, en una sola línea, separados por espacio
-- Para historias: sin hashtags
+- Entre 3 y 5. Ni uno más, ni uno menos.
+- 1 de marca + 1-2 ciudad/zona + 1-2 nicho
+- PROHIBIDO repetir hashtags entre opción principal y alternativa
+- Una sola línea al final, separados por espacio
+- Historias: sin hashtags
 
 PROHIBICIONES ABSOLUTAS:
-- Cero markdown: sin **, sin ##, sin guiones al inicio de línea como formato
-- Cero etiquetas internas como "Hook:", "Cuerpo:", "CTA:", "Opción 1:"
-- Cero explicaciones, comentarios o análisis antes o después del copy
-- Cero pensamiento visible ("voy a generar...", "aquí el copy...", "según las reglas...")
-- Cero hashtags duplicados entre las dos opciones
+- Sin markdown: sin **, sin ##, sin guiones de formato
+- Sin etiquetas internas: "Hook:", "Cuerpo:", "CTA:", "Opción 1:"
+- Sin explicaciones ni comentarios antes o después del copy
+- Sin pensamiento visible de la IA
+- Sin hashtags duplicados entre opciones
 
 FORMATO DE SALIDA — exactamente así, nada más:
 
