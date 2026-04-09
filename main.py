@@ -129,11 +129,16 @@ def api_download_file(file_id):
         if not r.ok:
             return jsonify({'error': 'No se pudo descargar el archivo'}), 502
         content_type = r.headers.get('Content-Type', 'application/octet-stream')
-        content_disp = r.headers.get('Content-Disposition', f'attachment; filename="{file_id}"')
+        # Extraer nombre del archivo desde Content-Disposition si viene
+        import re as _re
+        cd_orig = r.headers.get('Content-Disposition', '')
+        fname_match = _re.search(r'filename="([^"]+)"', cd_orig)
+        fname = fname_match.group(1) if fname_match else file_id
+        # Forzar attachment para que el browser descargue en vez de abrir en pestaña
         from flask import Response
         return Response(r.iter_content(chunk_size=8192),
             content_type=content_type,
-            headers={'Content-Disposition': content_disp})
+            headers={'Content-Disposition': f'attachment; filename="{fname}"'})
     except Exception as e:
         return jsonify({'error': str(e)}), 502
 
