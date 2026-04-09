@@ -287,9 +287,9 @@ body { background:#000; color:#eee; font-family:'Inter',sans-serif; min-height:1
           <div class="preview-drive" id="feed-drive">&#128193; Ver en Drive &#8594;</div>
         </div>
       </div>
-      <div class="ai-box" id="ai-box">
+      <div class="ai-box" id="ai-box" style="display:none;">
         <div class="ai-label">&#10022; Sugerencia IA</div>
-        <div class="ai-loading-text" id="ai-loading">Generando...</div>
+        <div class="ai-loading-text" id="ai-loading" style="display:none;">Generando...</div>
         <div class="ai-opciones" id="ai-opciones" style="display:none;">
           <div class="ai-opcion">
             <div class="ai-opcion-label">Opción principal</div>
@@ -309,7 +309,10 @@ body { background:#000; color:#eee; font-family:'Inter',sans-serif; min-height:1
           </div>
         </div>
       </div>
-      <div class="field-label">Copy</div>
+      <div class="field-label" style="display:flex;align-items:center;justify-content:space-between;">
+        Copy
+        <button class="btn-ghost" id="feed-gen-btn" onclick="loadAiCopy(activePieza)" style="font-size:11px;padding:4px 10px;">&#10022; Generar copy IA</button>
+      </div>
       <textarea class="copy-area" id="feed-copy" oninput="updateCharCount()" placeholder="Escribe el copy..."></textarea>
       <div class="char-count"><span id="char-count">0</span> / 2200</div>
       <div class="schedule-row">
@@ -664,15 +667,20 @@ function openFeedModal(p) {
   document.getElementById('feed-date').value = p.fecha_publicacion || fmt(new Date());
   document.getElementById('feed-time').value = p.hora_publicacion || '12:00';
 
-  loadAiCopy(p);
+  document.getElementById('ai-box').style.display = 'none';
+  document.getElementById('ai-opciones').style.display = 'none';
+  document.getElementById('feed-gen-btn').disabled = false;
   document.getElementById('modal-feed').classList.add('open');
 }
 
 async function loadAiCopy(p) {
   const loading = document.getElementById('ai-loading');
   const opciones = document.getElementById('ai-opciones');
+  const btn = document.getElementById('feed-gen-btn');
+  document.getElementById('ai-box').style.display = 'block';
   loading.style.display = 'block';
   opciones.style.display = 'none';
+  if (btn) btn.disabled = true;
   try {
     const r = await fetch('/api/generate-copy', {
       method: 'POST',
@@ -692,6 +700,8 @@ async function loadAiCopy(p) {
   } catch(e) {
     loading.style.display = 'block';
     loading.textContent = 'Error al generar sugerencia';
+  } finally {
+    if (btn) btn.disabled = false;
   }
 }
 
