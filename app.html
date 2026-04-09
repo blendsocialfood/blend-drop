@@ -520,10 +520,20 @@ async function load() {
   renderWeekStrip();
   document.getElementById('content').innerHTML = '<div class="empty">Cargando...</div>';
   try {
-    const [rHoy, rSemana] = await Promise.all([
-      fetch('/api/hoy?fecha=' + fmt(currentDate)),
-      fetch('/api/semana?fecha=' + fmt(currentDate))
-    ]);
+    // Calcular los 7 días de la semana actual
+    const d0 = new Date(currentDate);
+    const dow = d0.getDay() || 7;
+    const lunes = new Date(d0); lunes.setDate(d0.getDate() - dow + 1);
+    const fechasSemana = [];
+    for (let i = 0; i < 7; i++) {
+      const dd = new Date(lunes); dd.setDate(lunes.getDate() + i);
+      fechasSemana.push(fmt(dd));
+    }
+    // Fetch día actual + todos los días de la semana en paralelo
+    const fetches = [fetch('/api/hoy?fecha=' + fmt(currentDate))].concat(
+      fechasSemana.map(function(ds) { return fetch('/api/hoy?fecha=' + ds); })
+    );
+    const [rHoy, ...rSemanas] = await Promise.all(fetches);
     const clientes = await rHoy.json();
     allData = [];
     (clientes || []).forEach(function(cl) {
@@ -531,19 +541,20 @@ async function load() {
         p._client = cl.client_name; p.client_id = cl.client_id; allData.push(p);
       });
     });
-    // Cargar dots de toda la semana
-    if (rSemana.ok) {
-      const semData = await rSemana.json();
-      (semData || []).forEach(function(cl) {
+    // Reconstruir dotsData completo desde semana
+    dotsData = {};
+    await Promise.all(rSemanas.map(async function(r, i) {
+      if (!r.ok) return;
+      const data = await r.json();
+      const ds = fechasSemana[i];
+      dotsData[ds] = {pending: 0, done: 0};
+      (data || []).forEach(function(cl) {
         (cl.piezas || []).forEach(function(p) {
-          const ds = p.fecha_publicacion || '';
-          if (!ds) return;
-          if (!dotsData[ds]) dotsData[ds] = {pending:0, done:0};
           if (p.estado === 'publicado') dotsData[ds].done++;
           else dotsData[ds].pending++;
         });
       });
-    }
+    }));
     render();
     renderWeekStrip();
   } catch(e) {
