@@ -408,6 +408,7 @@ const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto'
 
 let currentDate = new Date();
 let allData = [];
+let dotsData = {}; // fecha → {pending, done} para week strip y calendario
 let calDate = new Date();
 let activePieza = null;
 
@@ -444,12 +445,10 @@ function renderWeekStrip() {
     const ds = fmt(dd);
     const isAct = ds === fmt(currentDate);
     const isTod = ds === fmt(today);
-    const dp = allData.filter(p => (p.fecha_publicacion || '') === ds);
-    const pending = dp.filter(p => p.estado !== 'publicado').length;
-    const done = dp.filter(p => p.estado === 'publicado').length;
+    const dp = dotsData[ds] || {pending:0, done:0};
     let dots = '';
-    for (let j = 0; j < Math.min(pending, 5); j++) dots += '<div class="wd"></div>';
-    for (let j = 0; j < Math.min(done, 3); j++) dots += '<div class="wd wd-g"></div>';
+    for (let j = 0; j < Math.min(dp.pending, 5); j++) dots += '<div class="wd"></div>';
+    for (let j = 0; j < Math.min(dp.done, 3); j++) dots += '<div class="wd wd-g"></div>';
     html += '<div class="wday'+(isAct?' active':'')+(isTod?' today':'')+'" onclick="selectDay(\''+ds+'\')">'
       +'<div class="wday-name">'+DIAS_CORTO[dd.getDay()]+'</div>'
       +'<div class="wday-num">'+dd.getDate()+'</div>'
@@ -498,7 +497,7 @@ function renderCal() {
     const ds = y+'-'+String(m+1).padStart(2,'0')+'-'+String(day).padStart(2,'0');
     const isAct = ds === fmt(currentDate);
     const isTod = ds === fmt(new Date());
-    const hasDot = allData.some(function(p){ return (p.fecha_publicacion||'') === ds; });
+    const hasDot = !!(dotsData[ds] && (dotsData[ds].pending + dotsData[ds].done) > 0);
     html += '<div class="cal-day'+(isAct?' selected':'')+(isTod&&!isAct?' today':'')+(hasDot?' has-dot':'')+'" onclick="calSelectDay(\''+ds+'\')">'+day+'</div>';
   }
   document.getElementById('cal-grid').innerHTML = html;
@@ -521,14 +520,30 @@ async function load() {
   renderWeekStrip();
   document.getElementById('content').innerHTML = '<div class="empty">Cargando...</div>';
   try {
-    const r = await fetch('/api/hoy?fecha=' + fmt(currentDate));
-    const clientes = await r.json();
+    const [rHoy, rSemana] = await Promise.all([
+      fetch('/api/hoy?fecha=' + fmt(currentDate)),
+      fetch('/api/semana?fecha=' + fmt(currentDate))
+    ]);
+    const clientes = await rHoy.json();
     allData = [];
     (clientes || []).forEach(function(cl) {
       cl.piezas.forEach(function(p) {
         p._client = cl.client_name; p.client_id = cl.client_id; allData.push(p);
       });
     });
+    // Cargar dots de toda la semana
+    if (rSemana.ok) {
+      const semData = await rSemana.json();
+      (semData || []).forEach(function(cl) {
+        (cl.piezas || []).forEach(function(p) {
+          const ds = p.fecha_publicacion || '';
+          if (!ds) return;
+          if (!dotsData[ds]) dotsData[ds] = {pending:0, done:0};
+          if (p.estado === 'publicado') dotsData[ds].done++;
+          else dotsData[ds].pending++;
+        });
+      });
+    }
     render();
     renderWeekStrip();
   } catch(e) {
@@ -628,7 +643,7 @@ function openFeedModal(p) {
   const driveEl = document.getElementById('feed-drive');
   if (p.drive_file_id) {
     driveEl.style.display = 'block';
-    driveEl.onclick = function(){ window.open(UNITY_URL+'/api/drive/file/'+p.drive_file_id, '_blank'); };
+    driveEl.onclick = function(){ window.open('/api/download/'+p.drive_file_id, '_blank'); };
   } else {
     driveEl.style.display = 'none';
   }
@@ -804,12 +819,12 @@ function useHistCopy(id) {
 
 function downloadFeed() {
   if (!activePieza || !activePieza.drive_file_id) { toast('Sin archivo en Drive', true); return; }
-  window.open(UNITY_URL+'/api/drive/file/'+activePieza.drive_file_id, '_blank');
+  window.open('/api/download/'+activePieza.drive_file_id, '_blank');
 }
 
 function downloadHistoria() {
   if (!activePieza || !activePieza.drive_file_id) return;
-  window.open(UNITY_URL+'/api/drive/file/'+activePieza.drive_file_id, '_blank');
+  window.open('/api/download/'+activePieza.drive_file_id, '_blank');
 }
 
 async function markHistoriaDone() {

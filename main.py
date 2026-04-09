@@ -117,6 +117,26 @@ def serve_media(filename):
         return 'Not found', 404
     return send_file(filepath)
 
+@app.route('/api/download/<file_id>')
+def api_download_file(file_id):
+    """Proxy de descarga de archivos Drive — evita el no-auth al abrir Unity directamente."""
+    if 'user' not in session:
+        return jsonify({'error': 'no auth'}), 401
+    token = generate_token(session['user'], session['role'])
+    try:
+        r = http_requests.get(f'{UNITY_URL}/api/drive/file/{file_id}',
+            params={'token': token}, timeout=30, stream=True)
+        if not r.ok:
+            return jsonify({'error': 'No se pudo descargar el archivo'}), 502
+        content_type = r.headers.get('Content-Type', 'application/octet-stream')
+        content_disp = r.headers.get('Content-Disposition', f'attachment; filename="{file_id}"')
+        from flask import Response
+        return Response(r.iter_content(chunk_size=8192),
+            content_type=content_type,
+            headers={'Content-Disposition': content_disp})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 502
+
 # ── Drive download ──
 
 def download_drive_file(drive_file_id, token):
