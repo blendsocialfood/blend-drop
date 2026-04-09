@@ -187,6 +187,14 @@ body { background:#000; color:#eee; font-family:'Inter',sans-serif; min-height:1
 .toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#22c55e; color:#000; padding:9px 22px; border-radius:9px; font-size:13px; font-weight:600; z-index:9999; opacity:0; transition:opacity .3s; pointer-events:none; }
 .toast.show { opacity:1; }
 .toast.err { background:#DC2626; color:#fff; }
+
+/* ── Filtros ── */
+.filter-bar { display:flex; align-items:center; gap:6px; padding:0 0 14px; flex-wrap:wrap; }
+.filter-group { display:flex; gap:4px; flex-wrap:wrap; }
+.filter-sep { width:1px; height:18px; background:#1e1e1e; flex-shrink:0; }
+.fpill { font-size:11px; font-weight:600; padding:4px 11px; border-radius:20px; cursor:pointer; border:1px solid #1e1e1e; background:#111; color:#444; transition:all .15s; }
+.fpill:hover { color:#ccc; border-color:#333; }
+.fpill.active { background:#1a0000; color:#DC2626; border-color:rgba(220,38,38,.35); }
 </style>
 </head>
 <body>
@@ -264,6 +272,15 @@ body { background:#000; color:#eee; font-family:'Inter',sans-serif; min-height:1
   <div class="prog-wrap">
     <div class="prog-label"><span id="prog-text"></span><span id="prog-pct"></span></div>
     <div class="prog"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="filter-bar" id="filter-bar" style="display:none;">
+    <div class="filter-group" id="fbar-tipo"></div>
+    <div class="filter-sep"></div>
+    <div class="filter-group" id="fbar-estado"></div>
+    <div class="filter-sep"></div>
+    <div class="filter-group" id="fbar-cliente"></div>
   </div>
 
   <!-- Content -->
@@ -415,6 +432,11 @@ let dotsData = {}; // fecha → {pending, done} para week strip y calendario
 let calDate = new Date();
 let activePieza = null;
 
+// Filtros
+let filterTipo    = null; // null | 'feed' | 'historias'
+let filterEstado  = null; // null | 'pendiente' | 'publicado'
+let filterCliente = null; // null | client_id (number)
+
 const STICKER_STEPS = {
   encuesta: () => 'Agrega el <span class="sticker-tag">\ud83d\udcca Encuesta</span> con las opciones del texto',
   slide: () => 'Agrega el <span class="sticker-tag">\ud83c\udf9a\ufe0f Slide</span> (barra deslizable)',
@@ -461,15 +483,17 @@ function renderWeekStrip() {
   strip.innerHTML = html;
 }
 
+function resetFilters() { filterTipo = null; filterEstado = null; filterCliente = null; }
+
 function selectDay(ds) {
   currentDate = new Date(ds + 'T12:00:00');
-  load();
+  resetFilters(); load();
 }
 
 function navDay(delta) {
   currentDate = new Date(currentDate);
   currentDate.setDate(currentDate.getDate() + delta);
-  load();
+  resetFilters(); load();
 }
 
 // Calendario popover
@@ -507,9 +531,9 @@ function renderCal() {
 }
 
 function navCal(delta) { calDate = new Date(calDate); calDate.setMonth(calDate.getMonth() + delta); renderCal(); }
-function calSelectDay(ds) { currentDate = new Date(ds + 'T12:00:00'); closeCal(); load(); }
-function goToday() { currentDate = new Date(); closeCal(); load(); }
-function goTomorrow() { var d = new Date(); d.setDate(d.getDate()+1); currentDate = d; closeCal(); load(); }
+function calSelectDay(ds) { currentDate = new Date(ds + 'T12:00:00'); resetFilters(); closeCal(); load(); }
+function goToday() { currentDate = new Date(); resetFilters(); closeCal(); load(); }
+function goTomorrow() { var d = new Date(); d.setDate(d.getDate()+1); currentDate = d; resetFilters(); closeCal(); load(); }
 
 function updateDateLabel() {
   const d = currentDate;
@@ -558,6 +582,7 @@ async function load() {
         });
       });
     }));
+    renderFilterBar();
     render();
     renderWeekStrip();
   } catch(e) {
@@ -565,18 +590,65 @@ async function load() {
   }
 }
 
+// ── Filtros ──
+function renderFilterBar() {
+  // Clientes únicos presentes en el día
+  const clientMap = {};
+  allData.forEach(function(p) { clientMap[p.client_id] = p._client; });
+  const clientIds = Object.keys(clientMap);
+
+  function pill(group, value, label) {
+    var isActive = group === 'tipo'    ? filterTipo    === value
+                 : group === 'estado'  ? filterEstado  === value
+                 :                       filterCliente === value;
+    var valStr = value === null ? 'null' : (typeof value === 'number' ? value : "'" + value + "'");
+    return '<button class="fpill'+(isActive?' active':'')+'" onclick="setFilter(\''+group+'\','+valStr+')">'+label+'</button>';
+  }
+
+  document.getElementById('fbar-tipo').innerHTML =
+    pill('tipo',null,'Todo') + pill('tipo','feed','Feed') + pill('tipo','historias','Historias');
+
+  document.getElementById('fbar-estado').innerHTML =
+    pill('estado',null,'Todo') + pill('estado','pendiente','Pendiente') + pill('estado','publicado','Publicado');
+
+  var clienteHTML = pill('cliente',null,'Todos');
+  clientIds.forEach(function(id) {
+    clienteHTML += pill('cliente', parseInt(id), clientMap[id]);
+  });
+  document.getElementById('fbar-cliente').innerHTML = clienteHTML;
+
+  // Solo mostrar barra si hay datos
+  document.getElementById('filter-bar').style.display = allData.length ? 'flex' : 'none';
+}
+
+function setFilter(group, value) {
+  if (group === 'tipo')    filterTipo    = value;
+  if (group === 'estado')  filterEstado  = value;
+  if (group === 'cliente') filterCliente = value;
+  renderFilterBar();
+  render();
+}
+
 // Render
 function render() {
-  const historias = allData.filter(function(p){ return p.tipo_pedido === 'historias'; });
-  const feed = allData.filter(function(p){ return p.tipo_pedido !== 'historias'; });
-  const total = allData.length;
-  const done = allData.filter(function(p){ return p.estado === 'publicado'; }).length;
+  // Aplicar filtros
+  var data = allData;
+  if (filterCliente !== null) data = data.filter(function(p){ return p.client_id === filterCliente; });
+  if (filterTipo === 'feed')       data = data.filter(function(p){ return p.tipo_pedido !== 'historias'; });
+  else if (filterTipo === 'historias') data = data.filter(function(p){ return p.tipo_pedido === 'historias'; });
+  if (filterEstado === 'pendiente')  data = data.filter(function(p){ return p.estado !== 'publicado'; });
+  else if (filterEstado === 'publicado') data = data.filter(function(p){ return p.estado === 'publicado'; });
+
+  const historias = data.filter(function(p){ return p.tipo_pedido === 'historias'; });
+  const feed = data.filter(function(p){ return p.tipo_pedido !== 'historias'; });
+  const total = data.length;
+  const done = data.filter(function(p){ return p.estado === 'publicado'; }).length;
   const pct = total ? Math.round(done/total*100) : 0;
 
-  document.getElementById('pub-badge').textContent = total ? (done+' / '+total+' publicados') : '';
-  document.getElementById('prog-text').textContent = total ? (done+' de '+total+' publicados') : '';
-  document.getElementById('prog-pct').textContent = total ? pct+'%' : '';
-  document.getElementById('prog-fill').style.width = pct+'%';
+  document.getElementById('pub-badge').textContent = allData.length ? (done+' / '+allData.length+' publicados') : '';
+  document.getElementById('prog-text').textContent = allData.length ? (done+' de '+allData.length+' publicados') : '';
+  document.getElementById('prog-pct').textContent = allData.length ? Math.round(allData.filter(function(p){return p.estado==='publicado';}).length/allData.length*100)+'%' : '';
+  document.getElementById('prog-fill').style.width = (allData.length ? Math.round(allData.filter(function(p){return p.estado==='publicado';}).length/allData.length*100) : 0)+'%';
 
   let html = '';
 
@@ -592,7 +664,7 @@ function render() {
     historias.filter(function(p){ return p.estado === 'publicado'; }).forEach(function(p){ html += cardHTML(p); });
   }
 
-  if (!allData.length) html = '<div class="empty">Sin piezas para este d\u00eda</div>';
+  if (!data.length) html = '<div class="empty">'+(allData.length ? 'Sin resultados para los filtros aplicados' : 'Sin piezas para este d\u00eda')+'</div>';
   document.getElementById('content').innerHTML = html;
 }
 
