@@ -131,7 +131,17 @@ body { background:#000; color:#eee; font-family:'Inter',sans-serif; min-height:1
 .copy-area:focus { border-color:#DC2626; }
 .char-count { font-size:11px; color:#333; text-align:right; margin-top:4px; }
 .ai-box { background:#050d05; border:1px solid #0a2a0a; border-radius:10px; padding:13px 14px; margin-bottom:14px; }
-.ai-label { font-size:11px; font-weight:700; color:#4ade80; text-transform:uppercase; margin-bottom:7px; display:flex; align-items:center; gap:5px; }
+.ai-label { font-size:11px; font-weight:700; color:#4ade80; text-transform:uppercase; margin-bottom:10px; display:flex; align-items:center; gap:5px; }
+.ai-loading-text { font-size:13px; color:#888; line-height:1.65; animation:pulse 1.2s infinite; }
+.ai-opciones { display:flex; flex-direction:column; gap:10px; }
+.ai-opcion { background:#0a0a0a; border:1px solid #1a2a1a; border-radius:9px; padding:11px 13px; }
+.ai-opcion-label { font-size:10px; font-weight:700; color:#4ade80; text-transform:uppercase; margin-bottom:6px; }
+.ai-opcion-texto { font-size:13px; color:#ccc; line-height:1.65; white-space:pre-line; margin-bottom:8px; }
+.ai-opcion-actions { display:flex; gap:8px; }
+.ai-copy-btn { font-size:11px; color:#4ade80; font-weight:600; cursor:pointer; background:none; border:1px solid #1a3a1a; border-radius:6px; padding:4px 10px; }
+.ai-copy-btn:hover { background:#0a2a0a; }
+.ai-use-btn { font-size:11px; color:#888; font-weight:600; cursor:pointer; background:none; border:1px solid #222; border-radius:6px; padding:4px 10px; }
+.ai-use-btn:hover { color:#ccc; border-color:#444; }
 .ai-text { font-size:13px; color:#888; line-height:1.65; white-space:pre-line; }
 .ai-use { font-size:12px; color:#4ade80; font-weight:600; cursor:pointer; margin-top:7px; display:inline-block; }
 .ai-loading { animation:pulse 1.2s infinite; }
@@ -279,8 +289,25 @@ body { background:#000; color:#eee; font-family:'Inter',sans-serif; min-height:1
       </div>
       <div class="ai-box" id="ai-box">
         <div class="ai-label">&#10022; Sugerencia IA</div>
-        <div class="ai-text ai-loading" id="ai-text">Generando...</div>
-        <span class="ai-use" id="ai-use-btn" onclick="useAiCopy()" style="display:none;">&#8592; Usar este copy</span>
+        <div class="ai-loading-text" id="ai-loading">Generando...</div>
+        <div class="ai-opciones" id="ai-opciones" style="display:none;">
+          <div class="ai-opcion">
+            <div class="ai-opcion-label">Opción principal</div>
+            <div class="ai-opcion-texto" id="ai-principal"></div>
+            <div class="ai-opcion-actions">
+              <button class="ai-copy-btn" onclick="copyOpcion('ai-principal')">Copiar</button>
+              <button class="ai-use-btn" onclick="useAiCopy('ai-principal')">Usar en copy</button>
+            </div>
+          </div>
+          <div class="ai-opcion">
+            <div class="ai-opcion-label">Opción alternativa</div>
+            <div class="ai-opcion-texto" id="ai-alternativa"></div>
+            <div class="ai-opcion-actions">
+              <button class="ai-copy-btn" onclick="copyOpcion('ai-alternativa')">Copiar</button>
+              <button class="ai-use-btn" onclick="useAiCopy('ai-alternativa')">Usar en copy</button>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="field-label">Copy</div>
       <textarea class="copy-area" id="feed-copy" oninput="updateCharCount()" placeholder="Escribe el copy..."></textarea>
@@ -330,8 +357,33 @@ body { background:#000; color:#eee; font-family:'Inter',sans-serif; min-height:1
       <div class="copy-hint">Toca para copiar al portapapeles</div>
       <div class="ai-box" id="hist-ai-box" style="display:none;">
         <div class="ai-label">&#10022; Sugerencia IA</div>
-        <div class="ai-text" id="hist-ai-text"></div>
-        <span class="ai-use" id="hist-ai-use-btn" onclick="useHistCopy()" style="display:none;">&#8592; Usar este copy</span>
+        <div class="ai-loading-text" id="hist-ai-loading">Generando...</div>
+        <div class="ai-opciones" id="hist-ai-opciones" style="display:none;">
+          <div class="ai-opcion">
+            <div class="ai-opcion-label">Opción principal</div>
+            <div class="ai-opcion-texto" id="hist-ai-principal"></div>
+            <div class="ai-opcion-actions">
+              <button class="ai-copy-btn" onclick="copyOpcion('hist-ai-principal')">Copiar</button>
+              <button class="ai-use-btn" onclick="useHistCopy('hist-ai-principal')">Usar</button>
+            </div>
+          </div>
+          <div class="ai-opcion">
+            <div class="ai-opcion-label">Opción alternativa</div>
+            <div class="ai-opcion-texto" id="hist-ai-alternativa"></div>
+            <div class="ai-opcion-actions">
+              <button class="ai-copy-btn" onclick="copyOpcion('hist-ai-alternativa')">Copiar</button>
+              <button class="ai-use-btn" onclick="useHistCopy('hist-ai-alternativa')">Usar</button>
+            </div>
+          </div>
+          <div class="ai-opcion" id="hist-ai-sticker-box" style="display:none;">
+            <div class="ai-opcion-label">Texto sticker</div>
+            <div class="ai-opcion-texto" id="hist-ai-sticker"></div>
+            <div class="ai-opcion-actions">
+              <button class="ai-copy-btn" onclick="copyOpcion('hist-ai-sticker')">Copiar</button>
+              <button class="ai-use-btn" onclick="useHistCopy('hist-ai-sticker')">Usar</button>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="hist-actions">
         <button class="btn-dl" onclick="downloadHistoria()">&#8595; Descargar</button>
@@ -591,11 +643,10 @@ function openFeedModal(p) {
 }
 
 async function loadAiCopy(p) {
-  const aiText = document.getElementById('ai-text');
-  const aiUseBtn = document.getElementById('ai-use-btn');
-  aiText.className = 'ai-text ai-loading';
-  aiText.textContent = 'Generando sugerencia...';
-  aiUseBtn.style.display = 'none';
+  const loading = document.getElementById('ai-loading');
+  const opciones = document.getElementById('ai-opciones');
+  loading.style.display = 'block';
+  opciones.style.display = 'none';
   try {
     const r = await fetch('/api/generate-copy', {
       method: 'POST',
@@ -603,23 +654,31 @@ async function loadAiCopy(p) {
       body: JSON.stringify({pieza_id: p.id})
     });
     const d = await r.json();
-    if (d.copy) {
-      aiText.className = 'ai-text';
-      aiText.textContent = d.copy;
-      aiUseBtn.style.display = 'block';
+    loading.style.display = 'none';
+    if (d.principal !== undefined) {
+      document.getElementById('ai-principal').textContent = d.principal;
+      document.getElementById('ai-alternativa').textContent = d.alternativa;
+      opciones.style.display = 'flex';
     } else {
-      aiText.className = 'ai-text';
-      aiText.textContent = d.error || 'No se pudo generar sugerencia';
+      loading.style.display = 'block';
+      loading.textContent = d.error || 'No se pudo generar sugerencia';
     }
   } catch(e) {
-    aiText.className = 'ai-text';
-    aiText.textContent = 'Error al generar sugerencia';
+    loading.style.display = 'block';
+    loading.textContent = 'Error al generar sugerencia';
   }
 }
 
-function useAiCopy() {
-  document.getElementById('feed-copy').value = document.getElementById('ai-text').textContent;
+function copyOpcion(id) {
+  const text = document.getElementById(id).textContent;
+  navigator.clipboard.writeText(text).then(function(){ toast('Copiado \u2713'); });
+}
+
+function useAiCopy(id) {
+  const text = document.getElementById(id).textContent;
+  document.getElementById('feed-copy').value = text;
   updateCharCount();
+  toast('Copy aplicado \u2713');
 }
 
 function updateCharCount() {
@@ -694,13 +753,13 @@ function copyCopy() {
 async function generateHistCopy() {
   if (!activePieza) return;
   const box = document.getElementById('hist-ai-box');
-  const aiText = document.getElementById('hist-ai-text');
-  const aiUse = document.getElementById('hist-ai-use-btn');
+  const loading = document.getElementById('hist-ai-loading');
+  const opciones = document.getElementById('hist-ai-opciones');
   const btn = document.getElementById('hist-gen-btn');
   box.style.display = 'block';
-  aiText.className = 'ai-text ai-loading';
-  aiText.textContent = 'Generando...';
-  aiUse.style.display = 'none';
+  loading.style.display = 'block';
+  loading.textContent = 'Generando...';
+  opciones.style.display = 'none';
   btn.disabled = true;
   try {
     const r = await fetch('/api/generate-copy', {
@@ -708,25 +767,32 @@ async function generateHistCopy() {
       body: JSON.stringify({pieza_id: activePieza.id})
     });
     const d = await r.json();
-    aiText.className = 'ai-text';
-    if (d.copy) {
-      aiText.textContent = d.copy;
-      aiUse.style.display = 'inline-block';
+    loading.style.display = 'none';
+    if (d.principal !== undefined) {
+      document.getElementById('hist-ai-principal').textContent = d.principal;
+      document.getElementById('hist-ai-alternativa').textContent = d.alternativa;
+      const stickerBox = document.getElementById('hist-ai-sticker-box');
+      if (d.sticker) {
+        document.getElementById('hist-ai-sticker').textContent = d.sticker;
+        stickerBox.style.display = 'block';
+      } else {
+        stickerBox.style.display = 'none';
+      }
+      opciones.style.display = 'flex';
     } else {
-      aiText.textContent = d.error || 'No se pudo generar copy';
+      loading.style.display = 'block';
+      loading.textContent = d.error || 'No se pudo generar copy';
     }
   } catch(e) {
-    aiText.className = 'ai-text';
-    aiText.textContent = 'Error al generar copy';
+    loading.style.display = 'block';
+    loading.textContent = 'Error al generar copy';
   }
   btn.disabled = false;
 }
 
-function useHistCopy() {
-  const text = document.getElementById('hist-ai-text').textContent;
+function useHistCopy(id) {
+  const text = document.getElementById(id).textContent;
   document.getElementById('hist-copy').textContent = text;
-  document.getElementById('hist-ai-box').style.display = 'none';
-  // Guardar en Unity
   if (activePieza) {
     fetch('/api/save-copy', {
       method:'POST', headers:{'Content-Type':'application/json'},

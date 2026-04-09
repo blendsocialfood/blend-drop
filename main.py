@@ -627,7 +627,23 @@ FORMATO DE SALIDA — exactamente así, nada más:
             max_tokens=1200,
             messages=[{'role': 'user', 'content': prompt}]
         )
-        return jsonify({'copy': msg.content[0].text})
+        raw = msg.content[0].text
+        # Separar opciones
+        principal = ''
+        alternativa = ''
+        sticker_txt = ''
+        parts = raw.split('--- OPCIÓN ALTERNATIVA ---')
+        if len(parts) >= 2:
+            part_a = parts[0].replace('--- OPCIÓN PRINCIPAL ---', '').strip()
+            part_b_full = parts[1]
+            sticker_parts = part_b_full.split('--- TEXTO STICKER ---')
+            alternativa = sticker_parts[0].strip()
+            if len(sticker_parts) >= 2:
+                sticker_txt = sticker_parts[1].strip()
+            principal = part_a
+        else:
+            principal = raw.replace('--- OPCIÓN PRINCIPAL ---', '').strip()
+        return jsonify({'principal': principal, 'alternativa': alternativa, 'sticker': sticker_txt})
     except Exception as e:
         return jsonify({'error': str(e)}), 502
 
