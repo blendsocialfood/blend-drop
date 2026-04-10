@@ -372,6 +372,22 @@ body { background:#000; color:#eee; font-family:'Inter',sans-serif; min-height:1
         </div>
         <div class="steps" id="hist-steps"></div>
       </div>
+      <div id="hist-links" style="display:none;margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;">
+        <div id="hist-link-delivery-wrap" style="display:none;flex:1;min-width:120px;">
+          <div style="font-size:10px;color:#888;margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px;">Link Delivery</div>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <span id="hist-link-delivery-val" style="font-size:12px;color:#2dd4bf;word-break:break-all;flex:1;"></span>
+            <button onclick="copyLink('hist-link-delivery-val')" style="padding:3px 8px;border-radius:6px;background:#001a18;border:1px solid rgba(45,212,191,.2);color:#2dd4bf;font-size:11px;cursor:pointer;white-space:nowrap;">Copiar</button>
+          </div>
+        </div>
+        <div id="hist-link-web-wrap" style="display:none;flex:1;min-width:120px;">
+          <div style="font-size:10px;color:#888;margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px;">Link Web</div>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <span id="hist-link-web-val" style="font-size:12px;color:#818cf8;word-break:break-all;flex:1;"></span>
+            <button onclick="copyLink('hist-link-web-val')" style="padding:3px 8px;border-radius:6px;background:#0d0d1a;border:1px solid rgba(129,140,248,.2);color:#818cf8;font-size:11px;cursor:pointer;white-space:nowrap;">Copiar</button>
+          </div>
+        </div>
+      </div>
       <div class="copy-display-label">Texto para el sticker</div>
       <div class="copy-display" id="hist-copy" onclick="copyCopy()"></div>
       <div class="copy-hint">Toca para copiar al portapapeles</div>
@@ -850,12 +866,29 @@ function openHistModal(p) {
   document.getElementById('hist-copy').textContent = p.copy || '(sin copy \u2014 agrega uno desde Unity)';
   document.getElementById('hist-ai-box').style.display = 'none';
   document.getElementById('hist-gen-btn').disabled = false;
+  // Links
+  var dlWrap = document.getElementById('hist-link-delivery-wrap');
+  var webWrap = document.getElementById('hist-link-web-wrap');
+  var linksBox = document.getElementById('hist-links');
+  if (p.link_delivery) {
+    document.getElementById('hist-link-delivery-val').textContent = p.link_delivery;
+    dlWrap.style.display = 'block';
+  } else { dlWrap.style.display = 'none'; }
+  if (p.link_web) {
+    document.getElementById('hist-link-web-val').textContent = p.link_web;
+    webWrap.style.display = 'block';
+  } else { webWrap.style.display = 'none'; }
+  linksBox.style.display = (p.link_delivery || p.link_web) ? 'flex' : 'none';
   document.getElementById('modal-hist').classList.add('open');
 }
 
 function copyCopy() {
   const text = document.getElementById('hist-copy').textContent;
   navigator.clipboard.writeText(text).then(function(){ toast('Copiado al portapapeles \u2713'); });
+}
+function copyLink(elId) {
+  const text = document.getElementById(elId).textContent;
+  navigator.clipboard.writeText(text).then(function(){ toast('Link copiado \u2713'); });
 }
 
 async function generateHistCopy() {
