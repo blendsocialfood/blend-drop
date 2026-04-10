@@ -755,8 +755,20 @@ function openFeedModal(p) {
   document.getElementById('feed-date').value = p.fecha_publicacion || fmt(new Date());
   document.getElementById('feed-time').value = p.hora_publicacion || '12:00';
 
-  document.getElementById('ai-box').style.display = 'none';
-  document.getElementById('ai-opciones').style.display = 'none';
+  // Pre-cargar copys generados desde Unity si existen
+  var aiBox = document.getElementById('ai-box');
+  var aiOpciones = document.getElementById('ai-opciones');
+  var aiLoading = document.getElementById('ai-loading');
+  if (p.copy_principal || p.copy_alternativo) {
+    document.getElementById('ai-principal').textContent = p.copy_principal || '';
+    document.getElementById('ai-alternativa').textContent = p.copy_alternativo || '';
+    aiBox.style.display = 'block';
+    if (aiLoading) aiLoading.style.display = 'none';
+    aiOpciones.style.display = 'flex';
+  } else {
+    aiBox.style.display = 'none';
+    aiOpciones.style.display = 'none';
+  }
   document.getElementById('feed-gen-btn').disabled = false;
   document.getElementById('modal-feed').classList.add('open');
 }
@@ -864,26 +876,7 @@ function openHistModal(p) {
   }
   document.getElementById('hist-steps').innerHTML = stepsHTML;
   document.getElementById('hist-copy').textContent = p.copy || '(sin copy \u2014 agrega uno desde Unity)';
-  // Pre-cargar copys generados desde Unity si existen
-  var aiBox = document.getElementById('hist-ai-box');
-  var aiOpciones = document.getElementById('hist-ai-opciones');
-  var aiLoading = document.getElementById('hist-ai-loading');
-  if (p.copy_principal || p.copy_alternativo) {
-    document.getElementById('hist-ai-principal').textContent = p.copy_principal || '';
-    document.getElementById('hist-ai-alternativa').textContent = p.copy_alternativo || '';
-    var stickerBox = document.getElementById('hist-ai-sticker-box');
-    if (p.copy_sticker) {
-      document.getElementById('hist-ai-sticker').textContent = p.copy_sticker;
-      if (stickerBox) stickerBox.style.display = 'block';
-    } else {
-      if (stickerBox) stickerBox.style.display = 'none';
-    }
-    aiBox.style.display = 'block';
-    aiLoading.style.display = 'none';
-    aiOpciones.style.display = 'flex';
-  } else {
-    aiBox.style.display = 'none';
-  }
+  document.getElementById('hist-ai-box').style.display = 'none';
   document.getElementById('hist-gen-btn').disabled = false;
   // Links
   var dlWrap = document.getElementById('hist-link-delivery-wrap');
