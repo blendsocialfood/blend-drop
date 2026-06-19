@@ -43,6 +43,9 @@ META_TOKEN = os.environ.get('META_TOKEN', '')           # System User "Drop" (no
 META_TOKEN_NICO = os.environ.get('META_TOKEN_NICO', '')  # Token personal Nico
 META_BM_ID = os.environ.get('META_BM_ID', '')
 DROP_URL = os.environ.get('DROP_URL', 'https://blend-drop-production.up.railway.app')
+# Meta NO baja media de *.up.railway.app -> se hostea en la web propia (blendsocialfood.cl) via uploader PHP
+WEB_UPLOAD_URL = os.environ.get('WEB_UPLOAD_URL', '')
+WEB_UPLOAD_TOKEN = os.environ.get('WEB_UPLOAD_TOKEN', '')
 GRAPH = 'https://graph.facebook.com/v21.0'
 
 IG_DAILY_LIMIT_FALLBACK = 25  # red de seguridad solo si Meta no responde el cupo real
@@ -286,6 +289,25 @@ def publish_to_meta(ig_user_id, media_url, kind, is_video, caption, meta_token):
     except Exception as e:
         return {'ok': False, 'error': str(e)}
 
+def web_upload(filename):
+    """Sube el media a la web propia (Meta no baja de *.up.railway.app). Retorna URL pública o None."""
+    if not (WEB_UPLOAD_URL and WEB_UPLOAD_TOKEN):
+        return None
+    path = os.path.join(MEDIA_DIR, filename)
+    if not os.path.exists(path):
+        return None
+    try:
+        with open(path, 'rb') as f:
+            r = http_requests.post(WEB_UPLOAD_URL, headers={'X-Drop-Token': WEB_UPLOAD_TOKEN},
+                files={'file': (filename, f)}, data={'name': filename}, timeout=90)
+        if r.ok and r.text.strip().startswith('http'):
+            return r.text.strip()
+        print(f"[DROP v4] web_upload bad response: {r.status_code} {r.text[:80]}")
+    except Exception as e:
+        print(f"[DROP v4] web_upload error: {e}")
+    return None
+
+
 def publish_slot(slot, meta_token=None):
     """Publica un slot cuyo media ya está local en MEDIA_DIR. Sin Unity."""
     if not meta_token:
@@ -301,7 +323,8 @@ def publish_slot(slot, meta_token=None):
     is_video = fn.endswith('.mp4')
     kind = 'story' if slot['destino'] == 'story' else 'feed'
     caption = '' if kind == 'story' else (slot['caption'] or '')
-    media_url = f"{DROP_URL}/media/{fn}"
+    # Hostear el media en la web propia (Meta no baja de *.up.railway.app); fallback al /media local
+    media_url = web_upload(fn) or f"{DROP_URL}/media/{fn}"
     return publish_to_meta(slot['ig_user_id'], media_url, kind, is_video, caption, meta_token)
 
 # ── Cron ──
