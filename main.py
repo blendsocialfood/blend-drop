@@ -695,6 +695,17 @@ def api_ig_accounts_save():
     conn.commit(); conn.close()
     return jsonify({'ok': True})
 
+@app.route('/api/ig-accounts/<int:client_id>', methods=['DELETE'])
+def api_ig_accounts_delete(client_id):
+    if not require_auth():
+        return jsonify({'error': 'no auth'}), 401
+    conn = get_db()
+    conn.execute("DELETE FROM client_ig_accounts WHERE client_id=?", (client_id,))
+    conn.execute("DELETE FROM slots WHERE client_id=?", (client_id,))
+    conn.commit(); conn.close()
+    return jsonify({'ok': True})
+
+
 @app.route('/api/discover-ig-accounts')
 def api_discover_ig():
     if not require_auth():
