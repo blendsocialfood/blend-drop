@@ -129,6 +129,8 @@ def init_db():
             kind TEXT DEFAULT 'foto',           -- foto | video
             destino TEXT NOT NULL DEFAULT 'story', -- feed | story
             caption TEXT DEFAULT '',
+            link TEXT DEFAULT '',                -- link para el link sticker (se sube a mano)
+            texto TEXT DEFAULT '',               -- texto/nota que va en la historia (a mano)
             local_time TEXT,                    -- HH:MM hora local del cliente
             timezone TEXT,                      -- snapshot IANA al programar
             scheduled_at_utc TEXT,              -- ISO UTC con +00:00, NULL si no programada
@@ -150,6 +152,8 @@ def init_db():
         "CREATE INDEX IF NOT EXISTS idx_slots_cron ON slots(status, scheduled_at_utc)",
         "CREATE INDEX IF NOT EXISTS idx_slots_cal ON slots(client_id, slot_date)",
         "CREATE INDEX IF NOT EXISTS idx_slots_pub ON slots(ig_user_id, status, published_at)",
+        "ALTER TABLE slots ADD COLUMN link TEXT DEFAULT ''",
+        "ALTER TABLE slots ADD COLUMN texto TEXT DEFAULT ''",
     ]:
         _safe(conn, ddl)
     conn.close()
@@ -556,12 +560,25 @@ def api_slot_schedule(sid):
     sched = datetime.fromisoformat(utc_iso)
     if sched < tz_utils.now_utc() - timedelta(hours=6):
         conn.close(); return jsonify({'error': 'esa hora ya pasó hace rato'}), 400
-    conn.execute("""UPDATE slots SET local_time=?, timezone=?, scheduled_at_utc=?, destino=?, caption=?,
+    conn.execute("""UPDATE slots SET local_time=?, timezone=?, scheduled_at_utc=?, destino=?, caption=?, link=?, texto=?,
         status='scheduled', mode='auto', error_msg=NULL, updated_at=datetime('now') WHERE id=?""",
-        (local_time, tzname, utc_iso, destino, caption, sid))
+        (local_time, tzname, utc_iso, destino, caption, data.get('link', ''), data.get('texto', ''), sid))
     conn.commit(); conn.close()
     return jsonify({'ok': True, 'status': 'scheduled', 'scheduled_at_utc': utc_iso,
                     'local_time': local_time, 'timezone': tzname})
+
+@app.route('/api/slot/<int:sid>/fields', methods=['POST'])
+def api_slot_fields(sid):
+    """Guarda link y texto del slot (para historias que se suben a mano). No programa."""
+    if not require_auth():
+        return jsonify({'error': 'no auth'}), 401
+    d = request.json or {}
+    conn = get_db()
+    conn.execute("UPDATE slots SET link=?, texto=?, destino=COALESCE(?, destino), updated_at=datetime('now') WHERE id=?",
+                 (d.get('link', ''), d.get('texto', ''), d.get('destino'), sid))
+    conn.commit(); conn.close()
+    return jsonify({'ok': True})
+
 
 @app.route('/api/slot/<int:sid>/unschedule', methods=['POST'])
 def api_slot_unschedule(sid):

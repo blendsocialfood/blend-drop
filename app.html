@@ -113,6 +113,13 @@ main{flex:1;min-width:0}
 .pop{position:fixed;z-index:200;background:#141414;border:1px solid var(--line2);border-radius:7px;padding:14px;width:248px;box-shadow:0 12px 40px rgba(0,0,0,.7);display:none}
 .pop.open{display:block}
 .pop h5{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--dim);margin-bottom:10px;font-weight:700}
+.pop .pl{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--dim);font-weight:700;margin:9px 0 4px;display:block}
+.pop .fld{display:flex;gap:6px;align-items:flex-start;margin-bottom:2px}
+.pop .fld input,.pop .fld textarea{flex:1;background:#0c0c0c;border:1px solid var(--line2);border-radius:5px;color:var(--txt);font:inherit;font-size:12px;padding:7px 9px;margin:0}
+.pop .fld textarea{min-height:40px;resize:vertical;display:block}
+.pop .cp{background:#1a1a1a;border:1px solid var(--line2);color:var(--dim);font:inherit;font-size:10px;font-weight:700;padding:7px 8px;border-radius:5px;cursor:pointer;white-space:nowrap}
+.pop .cp:hover{color:var(--txt)}
+.slot .lk{position:absolute;bottom:0;right:4px;font-size:10px;color:#7fb0ff}
 .toggle{display:flex;border:1px solid var(--line2);border-radius:5px;overflow:hidden;margin-bottom:11px}
 .toggle button{flex:1;background:none;border:none;color:var(--dim);font:inherit;font-size:12px;font-weight:700;padding:7px;cursor:pointer}
 .toggle button.on{background:#1c1c1c;color:var(--txt)}
@@ -157,12 +164,17 @@ main{flex:1;min-width:0}
 
 <!-- Popover programar -->
 <div class="pop" id="pop">
-  <h5>Programar publicación</h5>
+  <h5>Datos de la publicación</h5>
   <div class="toggle"><button id="dst-story" class="on" onclick="popDest('story')">Historia</button><button id="dst-feed" onclick="popDest('feed')">Feed</button></div>
+  <label class="pl">Link (para el sticker)</label>
+  <div class="fld"><input type="text" id="pop-link" placeholder="https://..."><button class="cp" onclick="copyVal('pop-link')">copiar</button></div>
+  <label class="pl">Texto</label>
+  <div class="fld"><textarea id="pop-texto" placeholder="Texto que va en la historia..."></textarea><button class="cp" onclick="copyVal('pop-texto')">copiar</button></div>
+  <label class="pl">Hora (para que se publique sola)</label>
   <input type="time" id="pop-time" value="12:00" oninput="popDbl()">
   <div class="dbl" id="pop-dbl"></div>
   <textarea id="pop-caption" placeholder="Caption (solo feed)..."></textarea>
-  <div class="row"><button onclick="closePop()">Cancelar</button><button class="go" onclick="confirmSchedule()">Programar</button></div>
+  <div class="row"><button onclick="closePop()">Cancelar</button><button onclick="saveFields()">Guardar</button><button class="go" onclick="confirmSchedule()">Programar</button></div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -308,7 +320,8 @@ function slotHTML(s,c){
           <button class="sbtn" onclick="publishNow(${s.id})">Publicar ya</button>
           <button class="sbtn" onclick="removeSlot(${s.id})">Quitar</button>`;
   }else if(s.status==='scheduled'){
-    acts=`<button class="sbtn org" onclick="unschedule(${s.id})">Desprogramar</button>
+    acts=`<button class="sbtn" onclick="openPop(event,${s.id},'${c.timezone}','${s.slot_date}')">Editar</button>
+          <button class="sbtn org" onclick="unschedule(${s.id})">Desprogramar</button>
           <button class="sbtn" onclick="dl(${s.id})">Descargar</button>`;
   }else{
     acts=`<button class="sbtn" onclick="dl(${s.id})">Descargar</button>`;
@@ -317,7 +330,7 @@ function slotHTML(s,c){
   }
   return `<div class="slot ${s.status}" title="${s.error_msg||''}">${media}${badge}
     <div class="kind">${s.kind==='video'?'▶':'IMG'} ${s.destino}</div>
-    <div class="ribbon">${stTxt}</div><div class="acts">${acts}</div></div>`;
+    <div class="ribbon">${stTxt}${s.link?' <span class="lk">🔗</span>':''}</div><div class="acts">${acts}</div></div>`;
 }
 
 // ── Cupos ──
@@ -367,15 +380,21 @@ async function uploadBatch(files,cid,ds){
 }
 
 // ── Popover programar ──
-function openPop(e,sid,tz,ds){e.stopPropagation();popSlot=sid;popTz=tz;popDate=ds;popDest='story';
-  document.getElementById('dst-story').className='on';document.getElementById('dst-feed').className='';
-  document.getElementById('pop-caption').style.display='none';document.getElementById('pop-caption').value='';
-  const now=new Date();document.getElementById('pop-time').value=String(now.getHours()).padStart(2,'0')+':00';
+function openPop(e,sid,tz,ds){e.stopPropagation();popSlot=sid;popTz=tz;popDate=ds;
+  let sl=null;(dayData.clients||[]).forEach(c=>c.slots.forEach(x=>{if(x.id===sid)sl=x;}));
+  popDest=(sl&&sl.destino)||'story';
+  document.getElementById('dst-story').className=popDest==='story'?'on':'';
+  document.getElementById('dst-feed').className=popDest==='feed'?'on':'';
+  document.getElementById('pop-link').value=(sl&&sl.link)||'';
+  document.getElementById('pop-texto').value=(sl&&sl.texto)||'';
+  document.getElementById('pop-caption').value=(sl&&sl.caption)||'';
+  document.getElementById('pop-caption').style.display=popDest==='feed'?'block':'none';
+  const now=new Date();document.getElementById('pop-time').value=(sl&&sl.local_time)||String(now.getHours()).padStart(2,'0')+':00';
   popDbl();
   const p=document.getElementById('pop');p.classList.add('open');
   const r=e.target.getBoundingClientRect();
   p.style.left=Math.min(r.left,window.innerWidth-262)+'px';
-  p.style.top=Math.min(r.bottom+6,window.innerHeight-280)+'px';
+  p.style.top=Math.max(8,Math.min(r.bottom+6,window.innerHeight-440))+'px';
 }
 function closePop(){document.getElementById('pop').classList.remove('open');popSlot=null}
 function popDestFn(d){popDest=d}
@@ -397,12 +416,20 @@ function popDbl(){
   }catch(e){}
   document.getElementById('pop-dbl').innerHTML=txt;
 }
+function popBody(){return {destino:popDest, caption:document.getElementById('pop-caption').value,
+  link:document.getElementById('pop-link').value, texto:document.getElementById('pop-texto').value};}
 async function confirmSchedule(){
   if(!popSlot)return;
-  const body={local_time:document.getElementById('pop-time').value,destino:popDest,caption:document.getElementById('pop-caption').value};
+  const body=Object.assign(popBody(),{local_time:document.getElementById('pop-time').value});
   const d=await (await fetch('/api/slot/'+popSlot+'/schedule',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json();
   if(d.ok){toast('Programada ✓','ok');closePop();loadDay()}else toast(d.error||'Error','err');
 }
+async function saveFields(){
+  if(!popSlot)return;
+  const d=await (await fetch('/api/slot/'+popSlot+'/fields',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(popBody())})).json();
+  if(d.ok){toast('Guardado ✓','ok');closePop();loadDay()}else toast('Error','err');
+}
+function copyVal(id){const v=document.getElementById(id).value;if(!v){toast('Vacío');return}navigator.clipboard.writeText(v).then(()=>toast('Copiado ✓','ok'));}
 document.addEventListener('click',e=>{if(!e.target.closest('.pop')&&!e.target.closest('.sbtn'))closePop()});
 
 // ── Acciones ──
