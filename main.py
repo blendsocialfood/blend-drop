@@ -298,7 +298,9 @@ def web_upload(filename):
         return None
     try:
         with open(path, 'rb') as f:
-            r = http_requests.post(WEB_UPLOAD_URL, headers={'X-Drop-Token': WEB_UPLOAD_TOKEN},
+            r = http_requests.post(WEB_UPLOAD_URL,
+                headers={'X-Drop-Token': WEB_UPLOAD_TOKEN,
+                         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'},
                 files={'file': (filename, f)}, data={'name': filename}, timeout=90)
         if r.ok and r.text.strip().startswith('http'):
             return r.text.strip()
